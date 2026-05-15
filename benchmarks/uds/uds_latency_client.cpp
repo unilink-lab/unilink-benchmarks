@@ -32,7 +32,8 @@ int main(int argc, char** argv) {
   try {
     const auto config = unilink_bench::parse_uds_client_args(argc, argv);
     UdsBenchClient client(config);
-    return unilink_bench::run_latency_client("uds", client, config.payload_size, config.iterations);
+    return unilink_bench::run_latency_client("uds", client, config.payload_size, config.iterations,
+                                             config.warmup_iterations, config.csv_output);
   } catch (const std::exception& ex) {
     std::cerr << ex.what() << "\n";
     return 1;

@@ -23,6 +23,9 @@ The first benchmark suite focuses on local echo latency tests for:
 
 Serial benchmarks may be added later as optional hardware-dependent benchmarks.
 
+TCP and UDS latency benchmarks use a small length header internally so each round trip measures one complete payload
+even though those transports are byte streams.
+
 ## Build
 
 ### Option 1: Use installed unilink package
@@ -71,6 +74,37 @@ Or use scripts:
 ./scripts/run_all_local.sh
 ```
 
+Latency clients also support warmup iterations and CSV output:
+
+```bash
+./build/bin/bench_tcp_latency_client \
+  --host 127.0.0.1 \
+  --port 9000 \
+  --payload-size 1024 \
+  --iterations 100000 \
+  --warmup-iterations 1000 \
+  --csv-output results.csv
+```
+
+## Backpressure Strategy
+
+unilink supports two backpressure strategies:
+
+- `Reliable`: waits for queue pressure to clear and prioritizes delivery.
+- `BestEffort`: avoids blocking and may drop data under pressure.
+
+Use the strategy benchmark to compare accepted throughput, received throughput, delivery rate, and failed sends:
+
+```bash
+./scripts/run_strategy_matrix.sh
+```
+
+Or run it directly:
+
+```bash
+./build/bin/bench_strategy_matrix --payload-size 1024 --duration 3 --csv-output strategy.csv
+```
+
 ## Metrics
 
 Each benchmark reports:
@@ -81,6 +115,13 @@ Each benchmark reports:
 - messages/sec
 - MiB/sec
 - latency min / avg / p50 / p95 / p99 / max
+
+The strategy benchmark reports:
+
+- accepted MiB/sec
+- received MiB/sec
+- delivery rate
+- failed sends
 
 ## Notes
 

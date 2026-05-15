@@ -7,6 +7,7 @@ PORT="${PORT:-9001}"
 HOST="${HOST:-127.0.0.1}"
 PAYLOAD_SIZE="${PAYLOAD_SIZE:-1024}"
 ITERATIONS="${ITERATIONS:-100000}"
+WARMUP_ITERATIONS="${WARMUP_ITERATIONS:-0}"
 
 "${BIN_DIR}/bench_udp_echo_server" --port "${PORT}" &
 SERVER_PID=$!
@@ -27,4 +28,6 @@ fi
   --host "${HOST}" \
   --port "${PORT}" \
   --payload-size "${PAYLOAD_SIZE}" \
-  --iterations "${ITERATIONS}"
+  --iterations "${ITERATIONS}" \
+  --warmup-iterations "${WARMUP_ITERATIONS}" \
+  "$@"

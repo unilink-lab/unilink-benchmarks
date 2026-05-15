@@ -3,6 +3,7 @@
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -69,7 +70,9 @@ class EchoWaiter {
 };
 
 template <typename Client>
-int run_latency_client(std::string_view transport, Client& client, size_t payload_size, size_t iterations) {
+int run_latency_client(std::string_view transport, Client& client, size_t payload_size, size_t iterations,
+                       size_t warmup_iterations = 0,
+                       const std::optional<std::string>& csv_output = std::nullopt) {
   if (!client.start_sync()) {
     std::cerr << "Failed to start " << transport << " client\n";
     return 1;
@@ -80,8 +83,7 @@ int run_latency_client(std::string_view transport, Client& client, size_t payloa
   std::vector<int64_t> samples;
   samples.reserve(iterations);
 
-  const auto total_start = now();
-  for (size_t i = 0; i < iterations; ++i) {
+  auto run_iteration = [&](size_t i, bool record_sample) {
     auto& waiter = client.echo_waiter();
     waiter.reset_iteration();
 
@@ -89,7 +91,7 @@ int run_latency_client(std::string_view transport, Client& client, size_t payloa
     if (!client.send_frame(frame)) {
       std::cerr << "Failed to send payload at iteration " << i << "\n";
       client.stop();
-      return 1;
+      return false;
     }
 
     const std::string echoed = waiter.wait_for_echo(std::chrono::seconds(5));
@@ -98,17 +100,37 @@ int run_latency_client(std::string_view transport, Client& client, size_t payloa
     if (!payload_matches(payload, echoed)) {
       std::cerr << "Echo payload mismatch at iteration " << i << "\n";
       client.stop();
-      return 1;
+      return false;
     }
 
-    samples.push_back(elapsed_us(start, end));
+    if (record_sample) {
+      samples.push_back(elapsed_us(start, end));
+    }
+    return true;
+  };
+
+  for (size_t i = 0; i < warmup_iterations; ++i) {
+    if (!run_iteration(i, false)) {
+      client.stop();
+      return 1;
+    }
+  }
+
+  const auto total_start = now();
+  for (size_t i = 0; i < iterations; ++i) {
+    if (!run_iteration(i, true)) {
+      client.stop();
+      return 1;
+    }
   }
   const auto total_end = now();
 
   client.stop();
 
-  print_result(transport, payload_size, iterations, seconds_between(total_start, total_end),
-               compute_latency_stats(std::move(samples)));
+  const auto result = make_latency_result(transport, payload_size, iterations, warmup_iterations,
+                                          seconds_between(total_start, total_end),
+                                          compute_latency_stats(std::move(samples)));
+  print_result(result, csv_output);
   return 0;
 }
 

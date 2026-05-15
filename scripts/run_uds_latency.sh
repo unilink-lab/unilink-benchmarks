@@ -6,6 +6,7 @@ BIN_DIR="${ROOT_DIR}/build/bin"
 SOCKET_PATH="${SOCKET_PATH:-/tmp/unilink_bench.sock}"
 PAYLOAD_SIZE="${PAYLOAD_SIZE:-1024}"
 ITERATIONS="${ITERATIONS:-100000}"
+WARMUP_ITERATIONS="${WARMUP_ITERATIONS:-0}"
 
 rm -f "${SOCKET_PATH}"
 "${BIN_DIR}/bench_uds_echo_server" --path "${SOCKET_PATH}" &
@@ -27,4 +28,6 @@ fi
 "${BIN_DIR}/bench_uds_latency_client" \
   --path "${SOCKET_PATH}" \
   --payload-size "${PAYLOAD_SIZE}" \
-  --iterations "${ITERATIONS}"
+  --iterations "${ITERATIONS}" \
+  --warmup-iterations "${WARMUP_ITERATIONS}" \
+  "$@"
