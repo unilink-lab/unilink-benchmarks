@@ -1,0 +1,121 @@
+name: Benchmark Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      unilink_ref:
+        description: "unilink tag or commit to benchmark"
+        required: true
+        default: "v0.7.2"
+      runner_labels:
+        description: "JSON array of self-hosted runner labels"
+        required: true
+        default: '["self-hosted","Linux","X64"]'
+      publish_release:
+        description: "Upload release assets when unilink_ref looks like a release tag"
+        required: true
+        type: boolean
+        default: true
+      payload_sizes:
+        description: "Space-separated payload sizes"
+        required: true
+        default: "64 256 1024 4096 16384 65536"
+      repeats:
+        description: "Repeats per payload"
+        required: true
+        default: "3"
+      iterations:
+        description: "Latency iterations per run"
+        required: true
+        default: "10000"
+      warmup_iterations:
+        description: "Latency warmup iterations per run"
+        required: true
+        default: "1000"
+      strategy_duration:
+        description: "Strategy benchmark duration in seconds"
+        required: true
+        default: "3"
+
+permissions:
+  contents: write
+
+jobs:
+  benchmark:
+    name: Benchmark unilink ${{ inputs.unilink_ref }}
+    runs-on: ${{ fromJSON(inputs.runner_labels) }}
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout benchmark repo
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DUNILINK_BENCH_USE_FETCHCONTENT=ON
+          -DUNILINK_BENCH_UNILINK_GIT_TAG="${{ inputs.unilink_ref }}"
+          -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run benchmark sweeps
+        env:
+          PAYLOAD_SIZES: ${{ inputs.payload_sizes }}
+          REPEATS: ${{ inputs.repeats }}
+          ITERATIONS: ${{ inputs.iterations }}
+          WARMUP_ITERATIONS: ${{ inputs.warmup_iterations }}
+          DURATION: ${{ inputs.strategy_duration }}
+        run: |
+          set -euo pipefail
+          result_dir="build/release-results"
+          mkdir -p "${result_dir}"
+
+          python3 scripts/collect_environment.py "${result_dir}"
+
+          OUTPUT="${result_dir}/latency_matrix.csv" \
+          SUMMARY="${result_dir}/latency_matrix_summary.md" \
+          ./scripts/run_latency_matrix.sh
+
+          OUTPUT="${result_dir}/strategy_sweep.csv" \
+          SUMMARY="${result_dir}/strategy_sweep_summary.md" \
+          ./scripts/run_strategy_sweep.sh
+
+      - name: Package benchmark result
+        id: package
+        run: >
+          python3 scripts/package_results.py
+          --result-dir build/release-results
+          --output-dir build/package
+          --unilink-ref "${{ inputs.unilink_ref }}"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.asset_base }}
+          path: |
+            ${{ steps.package.outputs.tarball }}
+            ${{ steps.package.outputs.checksum }}
+          if-no-files-found: error
+
+      - name: Upload release assets
+        if: ${{ inputs.publish_release && startsWith(inputs.unilink_ref, 'v') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UNILINK_REF: ${{ inputs.unilink_ref }}
+          TARBALL: ${{ steps.package.outputs.tarball }}
+          CHECKSUM: ${{ steps.package.outputs.checksum }}
+        run: |
+          set -euo pipefail
+          command -v gh >/dev/null
+          release_tag="benchmark-unilink-${UNILINK_REF}"
+          release_title="Benchmark results for unilink ${UNILINK_REF}"
+
+          if ! gh release view "${release_tag}" >/dev/null 2>&1; then
+            gh release create "${release_tag}" \
+              --title "${release_title}" \
+              --notes "Self-hosted benchmark results for unilink ${UNILINK_REF}."
+          fi
+
+          gh release upload "${release_tag}" "${TARBALL}" "${CHECKSUM}" --clobber

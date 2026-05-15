@@ -205,7 +205,7 @@ build/strategy_sweep.csv.meta
 
 Generated files under `build/` are local artifacts and are ignored by Git.
 
-To keep a benchmark snapshot in the repository, write results under `results/`:
+For ad-hoc local snapshots, write results under `results/`:
 
 ```bash
 RESULT_DIR=results/local/$(date -u +%Y-%m-%d)
@@ -229,6 +229,52 @@ git commit -m "docs: add local benchmark results"
 
 Each sweep also writes a `.meta` file containing environment and unilink source information, including the requested ref
 and resolved commit when available.
+
+For official release-version measurements, prefer GitHub Release assets instead of committing raw result files to the
+repository. The `Benchmark Release` workflow is intended for a self-hosted Linux x64 runner:
+
+```text
+Actions -> Benchmark Release -> Run workflow
+```
+
+Recommended input for the `unilink` 0.7.2 baseline:
+
+```text
+unilink_ref: v0.7.2
+publish_release: true
+```
+
+The workflow builds the benchmark suite against the requested `unilink` tag or commit, runs the latency and strategy
+sweeps, uploads a workflow artifact, and uploads release assets when the ref looks like a release tag. Release tags use
+this naming pattern:
+
+```text
+benchmark-unilink-v0.7.2
+```
+
+Each release artifact contains:
+
+```text
+latency_matrix.csv
+latency_matrix_summary.md
+latency_matrix.csv.meta
+strategy_sweep.csv
+strategy_sweep_summary.md
+strategy_sweep.csv.meta
+environment.txt
+hardware.json
+manifest.json
+```
+
+`environment.txt` is a human-readable runner summary. `hardware.json` records the self-hosted runner hardware and
+environment, including CPU model, logical CPUs, estimated physical cores, cache information when available, total memory,
+OS/kernel, compiler, CMake, Git, runner name, and GitHub run id.
+
+The release upload step uses the GitHub CLI (`gh`) on the self-hosted runner. If `gh` is not installed, the workflow
+artifact is still the right fallback output to keep from the run.
+
+Commit-id benchmark runs are useful for experiments, but they should usually stay as workflow artifacts rather than
+release assets.
 
 ## Script Configuration
 
