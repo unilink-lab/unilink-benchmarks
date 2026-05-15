@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/bench_common.sh"
 BIN_DIR="${ROOT_DIR}/build/bin"
 PORT="${PORT:-9001}"
 HOST="${HOST:-127.0.0.1}"
@@ -18,8 +19,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-sleep 0.3
-if ! kill -0 "${SERVER_PID}" >/dev/null 2>&1; then
+if ! wait_for_process "${SERVER_PID}" 5; then
   wait "${SERVER_PID}"
   exit 1
 fi

@@ -86,6 +86,28 @@ Latency clients also support warmup iterations and CSV output:
   --csv-output results.csv
 ```
 
+For repeated payload-size sweeps, use:
+
+```bash
+./scripts/run_latency_matrix.sh
+```
+
+Defaults:
+
+- payload sizes: `64 256 1024 4096 16384 65536`
+- repeats: `3`
+- measured iterations per run: `10000`
+- warmup iterations per run: `1000`
+
+Override with environment variables:
+
+```bash
+PAYLOAD_SIZES="64 1024 65536" REPEATS=5 ITERATIONS=50000 WARMUP_ITERATIONS=1000 \
+  ./scripts/run_latency_matrix.sh
+```
+
+The matrix script writes CSV, a median summary table, and a small metadata file under `build/`.
+
 ## Backpressure Strategy
 
 unilink supports two backpressure strategies:
@@ -93,7 +115,8 @@ unilink supports two backpressure strategies:
 - `Reliable`: waits for queue pressure to clear and prioritizes delivery.
 - `BestEffort`: avoids blocking and may drop data under pressure.
 
-Use the strategy benchmark to compare accepted throughput, received throughput, delivery rate, and failed sends:
+Use the strategy benchmark to compare accepted throughput, received throughput, delivery rate, and failed sends.
+This is a one-way streaming benchmark, not an echo latency benchmark:
 
 ```bash
 ./scripts/run_strategy_matrix.sh
@@ -103,6 +126,18 @@ Or run it directly:
 
 ```bash
 ./build/bin/bench_strategy_matrix --payload-size 1024 --duration 3 --csv-output strategy.csv
+```
+
+For repeated strategy sweeps across payload sizes:
+
+```bash
+./scripts/run_strategy_sweep.sh
+```
+
+Override with:
+
+```bash
+PAYLOAD_SIZES="64 1024 65536" REPEATS=5 DURATION=5 ./scripts/run_strategy_sweep.sh
 ```
 
 ## Metrics

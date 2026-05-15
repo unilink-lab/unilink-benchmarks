@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/bench_common.sh"
 BIN_DIR="${ROOT_DIR}/build/bin"
 SOCKET_PATH="${SOCKET_PATH:-/tmp/unilink_bench.sock}"
 PAYLOAD_SIZE="${PAYLOAD_SIZE:-1024}"
@@ -19,9 +20,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-sleep 0.3
-if ! kill -0 "${SERVER_PID}" >/dev/null 2>&1; then
+if ! wait_for_process "${SERVER_PID}" 5; then
   wait "${SERVER_PID}"
+  exit 1
+fi
+if ! wait_for_uds "${SOCKET_PATH}" 5; then
+  echo "UDS server did not create socket ${SOCKET_PATH}" >&2
   exit 1
 fi
 
