@@ -87,6 +87,13 @@ jobs:
           SUMMARY="${result_dir}/strategy_sweep_summary.md" \
           ./scripts/run_strategy_sweep.sh
 
+      - name: Generate release notes
+        run: >
+          python3 scripts/generate_release_notes.py
+          --result-dir build/release-results
+          --unilink-ref "${{ inputs.unilink_ref }}"
+          --output build/release-results/release_notes.md
+
       - name: Package benchmark result
         id: package
         run: >
@@ -111,6 +118,7 @@ jobs:
           UNILINK_REF: ${{ inputs.unilink_ref }}
           TARBALL: ${{ steps.package.outputs.tarball }}
           CHECKSUM: ${{ steps.package.outputs.checksum }}
+          NOTES_FILE: build/release-results/release_notes.md
         run: |
           set -euo pipefail
           command -v gh >/dev/null
@@ -120,7 +128,11 @@ jobs:
           if ! gh release view "${release_tag}" >/dev/null 2>&1; then
             gh release create "${release_tag}" \
               --title "${release_title}" \
-              --notes "Self-hosted benchmark results for unilink ${UNILINK_REF}."
+              --notes-file "${NOTES_FILE}"
+          else
+            gh release edit "${release_tag}" \
+              --title "${release_title}" \
+              --notes-file "${NOTES_FILE}"
           fi
 
           gh release upload "${release_tag}" "${TARBALL}" "${CHECKSUM}" --clobber

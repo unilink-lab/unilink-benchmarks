@@ -90,9 +90,11 @@ The workflow will:
 4. collect runner environment and hardware metadata;
 5. run the latency matrix;
 6. run the strategy sweep;
-7. package the result files into a tarball;
-8. upload the tarball as a workflow artifact;
-9. upload the tarball to a GitHub Release when `publish_release=true` and `unilink_ref` starts with `v`.
+7. generate human-readable release notes from the summary files and runner metadata;
+8. package the result files into a tarball;
+9. upload the tarball as a workflow artifact;
+10. upload the tarball to a GitHub Release when `publish_release=true` and `unilink_ref` starts with `v`;
+11. create or update the GitHub Release body with the generated summary.
 
 The default UDP latency payload cap is 1024 bytes. This keeps the `unilink` 0.7.2 baseline runnable because UDP echo
 payloads larger than 1024 bytes do not reliably return in this benchmark model. Set `udp_max_payload_size` to `0` only
@@ -139,7 +141,11 @@ strategy_sweep.csv.meta
 environment.txt
 hardware.json
 manifest.json
+release_notes.md
 ```
+
+The GitHub Release body is generated from `release_notes.md`. It includes the benchmark target, resolved commit,
+self-hosted runner hardware summary, latency summary table, strategy summary table, and run notes.
 
 ## Metadata Files
 

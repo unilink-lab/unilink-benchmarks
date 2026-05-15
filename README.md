@@ -269,11 +269,15 @@ strategy_sweep.csv.meta
 environment.txt
 hardware.json
 manifest.json
+release_notes.md
 ```
 
 `environment.txt` is a human-readable runner summary. `hardware.json` records the self-hosted runner hardware and
 environment, including CPU model, logical CPUs, estimated physical cores, cache information when available, total memory,
 OS/kernel, compiler, CMake, Git, runner name, and GitHub run id.
+
+The GitHub Release body is generated from `release_notes.md` and includes the benchmark target, runner summary, latency
+summary table, strategy summary table, and run notes.
 
 The release upload step uses the GitHub CLI (`gh`) on the self-hosted runner. If `gh` is not installed, the workflow
 artifact is still the right fallback output to keep from the run.
