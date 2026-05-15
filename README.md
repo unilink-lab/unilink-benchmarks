@@ -276,6 +276,9 @@ artifact is still the right fallback output to keep from the run.
 Commit-id benchmark runs are useful for experiments, but they should usually stay as workflow artifacts rather than
 release assets.
 
+See [Benchmark Release Results](docs/benchmark-release-results.md) for the full self-hosted runner and release asset
+workflow.
+
 ## Script Configuration
 
 Latency matrix environment variables:
