@@ -78,6 +78,7 @@ payload_sizes: 64 256 1024 4096 16384 65536
 repeats: 3
 iterations: 10000
 warmup_iterations: 1000
+udp_max_payload_size: 1024
 strategy_duration: 3
 ```
 
@@ -92,6 +93,10 @@ The workflow will:
 7. package the result files into a tarball;
 8. upload the tarball as a workflow artifact;
 9. upload the tarball to a GitHub Release when `publish_release=true` and `unilink_ref` starts with `v`.
+
+The default UDP latency payload cap is 1024 bytes. This keeps the `unilink` 0.7.2 baseline runnable because UDP echo
+payloads larger than 1024 bytes do not reliably return in this benchmark model. Set `udp_max_payload_size` to `0` only
+when intentionally validating a version or environment where larger UDP datagrams are expected to work.
 
 ## Commit SHA Runs
 

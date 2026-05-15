@@ -10,12 +10,21 @@ TRANSPORTS="${TRANSPORTS:-tcp udp uds}"
 REPEATS="${REPEATS:-3}"
 ITERATIONS="${ITERATIONS:-10000}"
 WARMUP_ITERATIONS="${WARMUP_ITERATIONS:-1000}"
+UDP_MAX_PAYLOAD_SIZE="${UDP_MAX_PAYLOAD_SIZE:-1024}"
 OUTPUT="${OUTPUT:-${ROOT_DIR}/build/latency_matrix.csv}"
 SUMMARY="${SUMMARY:-${ROOT_DIR}/build/latency_matrix_summary.md}"
 
 mkdir -p "$(dirname "${OUTPUT}")"
 rm -f "${OUTPUT}" "${SUMMARY}" "${OUTPUT}.meta"
 write_metadata "${OUTPUT}.meta"
+{
+  echo "payload_sizes,${PAYLOAD_SIZES}"
+  echo "transports,${TRANSPORTS}"
+  echo "repeats,${REPEATS}"
+  echo "iterations,${ITERATIONS}"
+  echo "warmup_iterations,${WARMUP_ITERATIONS}"
+  echo "udp_max_payload_size,${UDP_MAX_PAYLOAD_SIZE}"
+} >>"${OUTPUT}.meta"
 
 run_id=0
 for payload in ${PAYLOAD_SIZES}; do
@@ -30,6 +39,10 @@ for payload in ${PAYLOAD_SIZES}; do
             "${ROOT_DIR}/scripts/run_tcp_latency.sh" --csv-output "${OUTPUT}"
           ;;
         udp)
+          if [[ "${UDP_MAX_PAYLOAD_SIZE}" != "0" && "${payload}" -gt "${UDP_MAX_PAYLOAD_SIZE}" ]]; then
+            echo "latency skip: transport=udp payload=${payload} exceeds UDP_MAX_PAYLOAD_SIZE=${UDP_MAX_PAYLOAD_SIZE}"
+            continue
+          fi
           PORT=$((10000 + run_id)) PAYLOAD_SIZE="${payload}" ITERATIONS="${ITERATIONS}" \
             WARMUP_ITERATIONS="${WARMUP_ITERATIONS}" \
             "${ROOT_DIR}/scripts/run_udp_latency.sh" --csv-output "${OUTPUT}"

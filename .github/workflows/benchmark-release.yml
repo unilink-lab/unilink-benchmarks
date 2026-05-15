@@ -32,6 +32,10 @@ on:
         description: "Latency warmup iterations per run"
         required: true
         default: "1000"
+      udp_max_payload_size:
+        description: "Maximum UDP latency payload size; use 0 to disable the cap"
+        required: true
+        default: "1024"
       strategy_duration:
         description: "Strategy benchmark duration in seconds"
         required: true
@@ -66,6 +70,7 @@ jobs:
           REPEATS: ${{ inputs.repeats }}
           ITERATIONS: ${{ inputs.iterations }}
           WARMUP_ITERATIONS: ${{ inputs.warmup_iterations }}
+          UDP_MAX_PAYLOAD_SIZE: ${{ inputs.udp_max_payload_size }}
           DURATION: ${{ inputs.strategy_duration }}
         run: |
           set -euo pipefail

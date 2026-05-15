@@ -143,6 +143,7 @@ Defaults:
 - repeats: `3`
 - measured iterations per run: `10000`
 - warmup iterations per run: `1000`
+- UDP latency payload cap: `1024`
 
 Override with environment variables:
 
@@ -150,6 +151,10 @@ Override with environment variables:
 PAYLOAD_SIZES="64 1024 65536" REPEATS=5 ITERATIONS=50000 WARMUP_ITERATIONS=1000 \
   ./scripts/run_latency_matrix.sh
 ```
+
+UDP latency defaults to payloads up to 1024 bytes because `unilink` 0.7.2 UDP echo does not reliably return larger
+payloads in this benchmark model. Set `UDP_MAX_PAYLOAD_SIZE=0` to disable the cap for versions or environments where
+larger UDP datagrams are expected to work.
 
 The matrix script writes CSV, a median summary table, and a small metadata file under `build/`.
 
@@ -290,8 +295,15 @@ Latency matrix environment variables:
 | `REPEATS` | `3` | Number of repeated runs per payload/transport |
 | `ITERATIONS` | `10000` | Measured latency iterations per run |
 | `WARMUP_ITERATIONS` | `1000` | Unmeasured warmup iterations per run |
+| `UDP_MAX_PAYLOAD_SIZE` | `1024` | Skip UDP latency runs above this payload size; `0` disables the cap |
 | `OUTPUT` | `build/latency_matrix.csv` | Raw CSV output path |
 | `SUMMARY` | `build/latency_matrix_summary.md` | Median summary output path |
+
+UDP latency script environment variables:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `SERVER_START_DELAY` | `0.2` | Seconds to wait after the UDP server process starts before running the client |
 
 Strategy sweep environment variables:
 
