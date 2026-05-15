@@ -44,18 +44,20 @@ def read_section(path, fallback):
 
 
 def value_or_unknown(value):
-    return value if value not in (None, "") else "unknown"
+    return value if value not in (None, "", "None") else "unknown"
 
 
-def build_notes(result_dir, unilink_ref):
+def build_notes(result_dir, unilink_ref, platform_suffix, reference_platform):
     environment = read_key_value_file(result_dir / "environment.txt")
     metadata = read_metadata(result_dir / "latency_matrix.csv.meta")
     hardware = read_json(result_dir / "hardware.json")
     github_actions = hardware.get("github_actions", {})
+    jetson = hardware.get("hardware", {}).get("jetson", {})
 
     unilink_commit = metadata.get("unilink_commit")
     benchmark_commit = environment.get("github_sha") or github_actions.get("github_sha")
     run_id = environment.get("github_run_id") or github_actions.get("github_run_id")
+    platform_name = reference_platform or platform_suffix
 
     lines = [
         f"Self-hosted benchmark results for `unilink` `{unilink_ref}`.",
@@ -64,6 +66,8 @@ def build_notes(result_dir, unilink_ref):
         "",
         f"- unilink ref: `{unilink_ref}`",
         f"- unilink commit: `{value_or_unknown(unilink_commit)}`",
+        f"- reference platform: `{value_or_unknown(platform_name)}`",
+        f"- platform suffix: `{value_or_unknown(platform_suffix)}`",
         f"- benchmark repo commit: `{value_or_unknown(benchmark_commit)}`",
         f"- GitHub run id: `{value_or_unknown(run_id)}`",
         f"- measured at UTC: `{value_or_unknown(environment.get('timestamp_utc'))}`",
@@ -81,6 +85,23 @@ def build_notes(result_dir, unilink_ref):
         f"- memory KiB: `{value_or_unknown(environment.get('mem_total_kib'))}`",
         f"- compiler: `{value_or_unknown(environment.get('cxx'))}`",
         f"- CMake: `{value_or_unknown(environment.get('cmake'))}`",
+    ]
+
+    if jetson.get("detected"):
+        lines.extend(
+            [
+                "",
+                "## Jetson Environment",
+                "",
+                f"- Jetson model: `{value_or_unknown(jetson.get('model'))}`",
+                f"- L4T release: `{value_or_unknown(jetson.get('l4t_release'))}`",
+                f"- nvpmodel: `{value_or_unknown(environment.get('jetson_nvpmodel'))}`",
+                f"- jetson_clocks: `{value_or_unknown(environment.get('jetson_clocks'))}`",
+            ]
+        )
+
+    lines.extend(
+        [
         "",
         "## Latency Summary",
         "",
@@ -95,7 +116,8 @@ def build_notes(result_dir, unilink_ref):
         "- Full raw CSV, metadata, hardware record, manifest, and checksum are attached as release assets.",
         "- Latency values are round-trip local echo measurements in microseconds.",
         "- Strategy measurements are one-way streaming measurements.",
-    ]
+        ]
+    )
 
     udp_cap = metadata.get("udp_max_payload_size")
     if udp_cap and udp_cap != "0":
@@ -108,6 +130,8 @@ def main():
     parser = argparse.ArgumentParser(description="Generate GitHub Release notes for benchmark results.")
     parser.add_argument("--result-dir", default="build/release-results")
     parser.add_argument("--unilink-ref", required=True)
+    parser.add_argument("--platform-suffix", default="linux-x64-self-hosted")
+    parser.add_argument("--reference-platform", default="")
     parser.add_argument("--output", default="build/release-results/release_notes.md")
     args = parser.parse_args()
 
@@ -117,7 +141,10 @@ def main():
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(build_notes(result_dir, args.unilink_ref), encoding="utf-8")
+    output.write_text(
+        build_notes(result_dir, args.unilink_ref, args.platform_suffix, args.reference_platform),
+        encoding="utf-8",
+    )
     print(output)
 
 

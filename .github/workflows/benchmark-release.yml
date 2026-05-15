@@ -11,6 +11,18 @@ on:
         description: "JSON array of self-hosted runner labels"
         required: true
         default: '["self-hosted","Linux","X64"]'
+      platform_suffix:
+        description: "Suffix used in artifact names, for example linux-arm64-jetson-orin-nano-super"
+        required: true
+        default: "linux-x64-self-hosted"
+      release_suffix:
+        description: "Optional suffix used in release tag names, for example jetson-orin-nano-super"
+        required: false
+        default: ""
+      reference_platform:
+        description: "Human-readable reference platform name"
+        required: false
+        default: ""
       publish_release:
         description: "Upload release assets when unilink_ref looks like a release tag"
         required: true
@@ -92,6 +104,8 @@ jobs:
           python3 scripts/generate_release_notes.py
           --result-dir build/release-results
           --unilink-ref "${{ inputs.unilink_ref }}"
+          --platform-suffix "${{ inputs.platform_suffix }}"
+          --reference-platform "${{ inputs.reference_platform }}"
           --output build/release-results/release_notes.md
 
       - name: Package benchmark result
@@ -101,6 +115,8 @@ jobs:
           --result-dir build/release-results
           --output-dir build/package
           --unilink-ref "${{ inputs.unilink_ref }}"
+          --platform-suffix "${{ inputs.platform_suffix }}"
+          --reference-platform "${{ inputs.reference_platform }}"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
@@ -116,14 +132,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           UNILINK_REF: ${{ inputs.unilink_ref }}
+          RELEASE_SUFFIX: ${{ inputs.release_suffix }}
+          REFERENCE_PLATFORM: ${{ inputs.reference_platform }}
           TARBALL: ${{ steps.package.outputs.tarball }}
           CHECKSUM: ${{ steps.package.outputs.checksum }}
           NOTES_FILE: build/release-results/release_notes.md
         run: |
           set -euo pipefail
           command -v gh >/dev/null
+          release_suffix="$(printf '%s' "${RELEASE_SUFFIX}" | sed 's/[^A-Za-z0-9._-]/-/g')"
           release_tag="benchmark-unilink-${UNILINK_REF}"
+          if [[ -n "${release_suffix}" ]]; then
+            release_tag="${release_tag}-${release_suffix}"
+          fi
           release_title="Benchmark results for unilink ${UNILINK_REF}"
+          if [[ -n "${REFERENCE_PLATFORM}" ]]; then
+            release_title="${release_title} on ${REFERENCE_PLATFORM}"
+          elif [[ -n "${release_suffix}" ]]; then
+            release_title="${release_title} on ${release_suffix}"
+          fi
 
           if ! gh release view "${release_tag}" >/dev/null 2>&1; then
             gh release create "${release_tag}" \
