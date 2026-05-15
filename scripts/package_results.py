@@ -33,7 +33,7 @@ def file_checksums(result_dir):
     return checksums
 
 
-def write_manifest(result_dir, unilink_ref):
+def write_manifest(result_dir, unilink_ref, platform_suffix, reference_platform):
     metadata = read_metadata(result_dir / "latency_matrix.csv.meta")
     manifest = {
         "schema_version": 1,
@@ -41,6 +41,8 @@ def write_manifest(result_dir, unilink_ref):
         "unilink_ref": unilink_ref,
         "unilink_commit": metadata.get("unilink_commit"),
         "unilink_source_kind": metadata.get("unilink_source_kind"),
+        "platform_suffix": platform_suffix,
+        "reference_platform": reference_platform,
         "benchmark_repo_commit": os.environ.get("GITHUB_SHA"),
         "github_repository": os.environ.get("GITHUB_REPOSITORY"),
         "github_run_id": os.environ.get("GITHUB_RUN_ID"),
@@ -86,6 +88,7 @@ def main():
     parser.add_argument("--output-dir", default="build/package")
     parser.add_argument("--unilink-ref", required=True)
     parser.add_argument("--platform-suffix", default="linux-x64-self-hosted")
+    parser.add_argument("--reference-platform", default="")
     parser.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT"))
     args = parser.parse_args()
 
@@ -93,8 +96,8 @@ def main():
     if not result_dir.is_dir():
         raise SystemExit(f"result directory does not exist: {result_dir}")
 
-    write_manifest(result_dir, args.unilink_ref)
-    asset_base = f"unilink-{safe_ref(args.unilink_ref)}-{args.platform_suffix}"
+    write_manifest(result_dir, args.unilink_ref, args.platform_suffix, args.reference_platform)
+    asset_base = f"unilink-{safe_ref(args.unilink_ref)}-{safe_ref(args.platform_suffix)}"
     tarball = create_tarball(result_dir, Path(args.output_dir), asset_base)
     checksum = write_sha256(tarball)
 

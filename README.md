@@ -236,7 +236,7 @@ Each sweep also writes a `.meta` file containing environment and unilink source 
 and resolved commit when available.
 
 For official release-version measurements, prefer GitHub Release assets instead of committing raw result files to the
-repository. The `Benchmark Release` workflow is intended for a self-hosted Linux x64 runner:
+repository. The `Benchmark Release` workflow is intended for a self-hosted runner:
 
 ```text
 Actions -> Benchmark Release -> Run workflow
@@ -249,12 +249,24 @@ unilink_ref: v0.7.2
 publish_release: true
 ```
 
+Recommended input for a Jetson Orin Nano Super reference baseline:
+
+```text
+unilink_ref: v0.7.2
+runner_labels: ["self-hosted","Linux","ARM64","jetson-orin-nano-super"]
+platform_suffix: linux-arm64-jetson-orin-nano-super
+release_suffix: jetson-orin-nano-super
+reference_platform: Jetson Orin Nano Super
+publish_release: true
+```
+
 The workflow builds the benchmark suite against the requested `unilink` tag or commit, runs the latency and strategy
 sweeps, uploads a workflow artifact, and uploads release assets when the ref looks like a release tag. Release tags use
 this naming pattern:
 
 ```text
 benchmark-unilink-v0.7.2
+benchmark-unilink-v0.7.2-jetson-orin-nano-super
 ```
 
 Each release artifact contains:
@@ -275,6 +287,8 @@ release_notes.md
 `environment.txt` is a human-readable runner summary. `hardware.json` records the self-hosted runner hardware and
 environment, including CPU model, logical CPUs, estimated physical cores, cache information when available, total memory,
 OS/kernel, compiler, CMake, Git, runner name, and GitHub run id.
+On Jetson systems it also records device-tree model, L4T release, `nvpmodel -q`, `jetson_clocks --show`, and thermal
+zone readings when available.
 
 The GitHub Release body is generated from `release_notes.md` and includes the benchmark target, runner summary, latency
 summary table, strategy summary table, and run notes.

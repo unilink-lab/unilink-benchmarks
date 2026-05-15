@@ -32,6 +32,12 @@ For `unilink` 0.7.2:
 benchmark-unilink-v0.7.2
 ```
 
+For a Jetson Orin Nano Super reference result:
+
+```text
+benchmark-unilink-v0.7.2-jetson-orin-nano-super
+```
+
 Recommended release title:
 
 ```text
@@ -40,13 +46,19 @@ Benchmark results for unilink v0.7.2
 
 ## Self-Hosted Runner
 
-Use a stable self-hosted Linux x64 runner for baseline results. Public GitHub-hosted runners are useful for build checks,
-but they are not stable enough for benchmark baselines because hardware and host load are outside our control.
+Use a stable self-hosted runner for baseline results. Public GitHub-hosted runners are useful for build checks, but they
+are not stable enough for benchmark baselines because hardware and host load are outside our control.
 
 Recommended runner labels:
 
 ```json
 ["self-hosted","Linux","X64"]
+```
+
+For Jetson Orin Nano Super, register the runner with ARM64 and a board-specific label:
+
+```json
+["self-hosted","Linux","ARM64","jetson-orin-nano-super"]
 ```
 
 The runner should have:
@@ -82,6 +94,23 @@ udp_max_payload_size: 1024
 strategy_duration: 3
 ```
 
+For a Jetson Orin Nano Super reference baseline, use:
+
+```text
+unilink_ref: v0.7.2
+runner_labels: ["self-hosted","Linux","ARM64","jetson-orin-nano-super"]
+platform_suffix: linux-arm64-jetson-orin-nano-super
+release_suffix: jetson-orin-nano-super
+reference_platform: Jetson Orin Nano Super
+publish_release: true
+payload_sizes: 64 256 1024 4096 16384 65536
+repeats: 3
+iterations: 10000
+warmup_iterations: 1000
+udp_max_payload_size: 1024
+strategy_duration: 3
+```
+
 The workflow will:
 
 1. check out `unilink-benchmarks`;
@@ -99,6 +128,10 @@ The workflow will:
 The default UDP latency payload cap is 1024 bytes. This keeps the `unilink` 0.7.2 baseline runnable because UDP echo
 payloads larger than 1024 bytes do not reliably return in this benchmark model. Set `udp_max_payload_size` to `0` only
 when intentionally validating a version or environment where larger UDP datagrams are expected to work.
+
+For Jetson baseline runs, keep power mode, clock state, cooling, and background system load controlled. The environment
+collector records Jetson-specific information when available, including device-tree model, L4T release, `nvpmodel -q`,
+`jetson_clocks --show`, and thermal zone readings.
 
 ## Commit SHA Runs
 
@@ -129,6 +162,13 @@ unilink-v0.7.2-linux-x64-self-hosted.tar.gz
 unilink-v0.7.2-linux-x64-self-hosted.tar.gz.sha256
 ```
 
+For Jetson Orin Nano Super:
+
+```text
+unilink-v0.7.2-linux-arm64-jetson-orin-nano-super.tar.gz
+unilink-v0.7.2-linux-arm64-jetson-orin-nano-super.tar.gz.sha256
+```
+
 The tarball contains:
 
 ```text
@@ -155,6 +195,8 @@ self-hosted runner hardware summary, latency summary table, strategy summary tab
 - resolved `unilink` commit when available;
 - benchmark repository commit;
 - GitHub run id;
+- platform suffix;
+- reference platform;
 - SHA-256 checksums for packaged result files.
 
 `environment.txt` is a human-readable summary of the runner.
@@ -176,6 +218,7 @@ self-hosted runner hardware summary, latency summary table, strategy summary tab
 - CMake version;
 - Git version;
 - GitHub runner name, OS, architecture, run id, and commit SHA.
+- Jetson model, L4T release, power mode, clock status, and thermal zones when available.
 
 Hardware metadata is required because benchmark results are only directly comparable when the runner hardware and software
 environment are the same or intentionally controlled.

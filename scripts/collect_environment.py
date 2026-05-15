@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def run(command):
+def run(command, timeout_seconds=5):
     executable = shutil.which(command[0])
     if executable is None:
         return None
@@ -21,8 +21,9 @@ def run(command):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
+            timeout=timeout_seconds,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None
     if completed.returncode != 0:
         return None
@@ -33,6 +34,14 @@ def first_line(value):
     if not value:
         return None
     return value.splitlines()[0].strip()
+
+
+def read_text_file(path):
+    file_path = Path(path)
+    if not file_path.exists():
+        return None
+    value = file_path.read_text(encoding="utf-8", errors="replace").replace("\x00", "").strip()
+    return value or None
 
 
 def read_os_release():
@@ -105,6 +114,38 @@ def parse_lscpu():
     return values
 
 
+def read_thermal_zones():
+    zones = []
+    for zone in sorted(Path("/sys/class/thermal").glob("thermal_zone*")):
+        zone_type = read_text_file(zone / "type")
+        temp_raw = read_text_file(zone / "temp")
+        temp_millic = int(temp_raw) if temp_raw and temp_raw.lstrip("-").isdigit() else None
+        zones.append(
+            {
+                "name": zone.name,
+                "type": zone_type,
+                "temp_millicelsius": temp_millic,
+            }
+        )
+    return zones
+
+
+def collect_jetson_info():
+    model = read_text_file("/proc/device-tree/model") or read_text_file("/sys/firmware/devicetree/base/model")
+    l4t_release = read_text_file("/etc/nv_tegra_release")
+    nvpmodel = run(["nvpmodel", "-q"])
+    jetson_clocks = run(["jetson_clocks", "--show"])
+
+    info = {
+        "model": model,
+        "l4t_release": l4t_release,
+        "nvpmodel_query": nvpmodel,
+        "jetson_clocks_show": jetson_clocks,
+    }
+    info["detected"] = any(value for value in info.values())
+    return info
+
+
 def collect_environment():
     os_release = read_os_release()
     meminfo = read_meminfo()
@@ -133,6 +174,8 @@ def collect_environment():
                 "mem_total_kib": meminfo.get("MemTotal"),
                 "swap_total_kib": meminfo.get("SwapTotal"),
             },
+            "thermal_zones": read_thermal_zones(),
+            "jetson": collect_jetson_info(),
         },
         "tools": {
             "cmake": first_line(run(["cmake", "--version"])),
@@ -175,6 +218,10 @@ def write_text_report(data, path):
         f"l3_cache: {cpu.get('l3_cache')}",
         f"mem_total_kib: {memory.get('mem_total_kib')}",
         f"swap_total_kib: {memory.get('swap_total_kib')}",
+        f"jetson_model: {data['hardware']['jetson'].get('model')}",
+        f"jetson_l4t_release: {data['hardware']['jetson'].get('l4t_release')}",
+        f"jetson_nvpmodel: {first_line(data['hardware']['jetson'].get('nvpmodel_query'))}",
+        f"jetson_clocks: {first_line(data['hardware']['jetson'].get('jetson_clocks_show'))}",
         f"cmake: {data['tools'].get('cmake')}",
         f"cxx: {data['tools'].get('cxx')}",
         f"git: {data['tools'].get('git')}",
