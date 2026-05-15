@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/bench_common.sh"
+export UNILINK_BENCH_BUILD_DIR="${UNILINK_BENCH_BUILD_DIR:-${ROOT_DIR}/build}"
 
 PAYLOAD_SIZES="${PAYLOAD_SIZES:-64 256 1024 4096 16384 65536}"
 TRANSPORTS="${TRANSPORTS:-tcp udp uds}"

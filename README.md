@@ -42,6 +42,22 @@ cmake -S . -B build -DUNILINK_BENCH_USE_FETCHCONTENT=ON
 cmake --build build
 ```
 
+Specify a released version tag or commit id for reproducible benchmark runs:
+
+```bash
+cmake -S . -B build \
+  -DUNILINK_BENCH_USE_FETCHCONTENT=ON \
+  -DUNILINK_BENCH_UNILINK_GIT_TAG=v0.7.2
+cmake --build build
+```
+
+```bash
+cmake -S . -B build \
+  -DUNILINK_BENCH_USE_FETCHCONTENT=ON \
+  -DUNILINK_BENCH_UNILINK_GIT_TAG=<commit-id>
+cmake --build build
+```
+
 For local development against a checked-out `unilink` source tree:
 
 ```bash
@@ -49,6 +65,8 @@ cmake -S . -B build -DUNILINK_BENCH_USE_FETCHCONTENT=ON \
   -DUNILINK_BENCH_UNILINK_SOURCE_DIR=/path/to/unilink
 cmake --build build
 ```
+
+Benchmark sweep metadata records the requested unilink ref and the resolved commit when available.
 
 ## Run
 

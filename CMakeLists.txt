@@ -15,6 +15,49 @@ else()
   find_package(unilink CONFIG REQUIRED)
 endif()
 
+set(UNILINK_BENCH_UNILINK_SOURCE_KIND "installed-package")
+set(UNILINK_BENCH_UNILINK_SOURCE_PATH "")
+set(UNILINK_BENCH_UNILINK_REQUESTED_REF "")
+set(UNILINK_BENCH_UNILINK_COMMIT "")
+
+if(UNILINK_BENCH_USE_FETCHCONTENT)
+  set(UNILINK_BENCH_UNILINK_SOURCE_KIND "fetchcontent")
+  set(UNILINK_BENCH_UNILINK_REQUESTED_REF
+      "${UNILINK_BENCH_UNILINK_GIT_TAG}"
+  )
+  if(UNILINK_BENCH_UNILINK_SOURCE_DIR)
+    set(UNILINK_BENCH_UNILINK_SOURCE_KIND "local-source")
+    set(UNILINK_BENCH_UNILINK_REQUESTED_REF "local-source")
+    set(UNILINK_BENCH_UNILINK_SOURCE_PATH
+        "${UNILINK_BENCH_UNILINK_SOURCE_DIR}"
+    )
+  elseif(DEFINED unilink_SOURCE_DIR)
+    set(UNILINK_BENCH_UNILINK_SOURCE_PATH "${unilink_SOURCE_DIR}")
+  endif()
+else()
+  if(DEFINED unilink_DIR)
+    set(UNILINK_BENCH_UNILINK_SOURCE_PATH "${unilink_DIR}")
+  endif()
+endif()
+
+if(UNILINK_BENCH_UNILINK_SOURCE_PATH)
+  execute_process(
+    COMMAND git -C "${UNILINK_BENCH_UNILINK_SOURCE_PATH}" rev-parse HEAD
+    OUTPUT_VARIABLE UNILINK_BENCH_UNILINK_COMMIT
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+endif()
+
+file(
+  WRITE "${CMAKE_BINARY_DIR}/unilink_bench_metadata.csv"
+  "key,value\n"
+  "unilink_source_kind,${UNILINK_BENCH_UNILINK_SOURCE_KIND}\n"
+  "unilink_requested_ref,${UNILINK_BENCH_UNILINK_REQUESTED_REF}\n"
+  "unilink_source_path,${UNILINK_BENCH_UNILINK_SOURCE_PATH}\n"
+  "unilink_commit,${UNILINK_BENCH_UNILINK_COMMIT}\n"
+)
+
 add_library(unilink_bench_common INTERFACE)
 target_include_directories(unilink_bench_common
                            INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks)

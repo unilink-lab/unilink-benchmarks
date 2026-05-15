@@ -48,10 +48,15 @@ wait_for_uds() {
 
 write_metadata() {
   local path="$1"
+  local bench_build_dir="${UNILINK_BENCH_BUILD_DIR:-build}"
+  local cmake_metadata="${bench_build_dir}/unilink_bench_metadata.csv"
   {
     echo "timestamp_utc,$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "uname,$(uname -a)"
     echo "cmake,$(cmake --version | head -n 1)"
     echo "cxx,$(${CXX:-c++} --version | head -n 1)"
+    if [[ -f "${cmake_metadata}" ]]; then
+      tail -n +2 "${cmake_metadata}"
+    fi
   } >"${path}"
 }
