@@ -74,7 +74,7 @@ Specify a released version tag or commit id for reproducible benchmark runs:
 ```bash
 cmake -S . -B build \
   -DUNILINK_BENCH_USE_FETCHCONTENT=ON \
-  -DUNILINK_BENCH_UNILINK_GIT_TAG=v0.7.2
+  -DUNILINK_BENCH_UNILINK_GIT_TAG=v0.7.5
 cmake --build build
 ```
 
@@ -152,9 +152,9 @@ PAYLOAD_SIZES="64 1024 65536" REPEATS=5 ITERATIONS=50000 WARMUP_ITERATIONS=1000 
   ./scripts/run_latency_matrix.sh
 ```
 
-UDP latency defaults to payloads up to 1024 bytes because `unilink` 0.7.2 UDP echo does not reliably return larger
-payloads in this benchmark model. Set `UDP_MAX_PAYLOAD_SIZE=0` to disable the cap for versions or environments where
-larger UDP datagrams are expected to work.
+UDP latency defaults to payloads up to 1024 bytes so release runs keep a stable cross-version benchmark model. Set
+`UDP_MAX_PAYLOAD_SIZE=0` to disable the cap when validating versions or environments where larger UDP datagrams are
+expected to work.
 
 The matrix script writes CSV, a median summary table, and a small metadata file under `build/`.
 
@@ -242,17 +242,17 @@ repository. The `Benchmark Release` workflow is intended for a self-hosted runne
 Actions -> Benchmark Release -> Run workflow
 ```
 
-Recommended input for the `unilink` 0.7.2 baseline:
+Recommended input for the `unilink` 0.7.5 baseline:
 
 ```text
-unilink_ref: v0.7.2
+unilink_ref: v0.7.5
 publish_release: true
 ```
 
 Recommended input for a Jetson Orin Nano Super reference baseline:
 
 ```text
-unilink_ref: v0.7.2
+unilink_ref: v0.7.5
 runner_labels: ["self-hosted","Linux","ARM64","jetson-orin-nano-super"]
 platform_suffix: linux-arm64-jetson-orin-nano-super
 release_suffix: jetson-orin-nano-super
@@ -265,8 +265,8 @@ sweeps, uploads a workflow artifact, and uploads release assets when the ref loo
 this naming pattern:
 
 ```text
-benchmark-unilink-v0.7.2
-benchmark-unilink-v0.7.2-jetson-orin-nano-super
+benchmark-unilink-v0.7.5
+benchmark-unilink-v0.7.5-jetson-orin-nano-super
 ```
 
 Each release artifact contains:
@@ -301,6 +301,41 @@ release assets.
 
 See [Benchmark Release Results](docs/benchmark-release-results.md) for the full self-hosted runner and release asset
 workflow.
+
+## Release Comparison
+
+Use `scripts/run_release_comparison.sh` to measure two `unilink` refs back to back on the same runner:
+
+```bash
+BASELINE_REF=v0.7.4 CANDIDATE_REF=v0.7.5 ./scripts/run_release_comparison.sh
+```
+
+Default output:
+
+```text
+build/comparison/v0.7.4/
+build/comparison/v0.7.5/
+build/comparison/compare_summary.md
+```
+
+The comparison script builds each ref separately, runs the latency and strategy sweeps with the same settings, packages
+per-ref result manifests, and generates a Markdown summary. Compare only runs from the same runner and environment.
+
+Configuration:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `BASELINE_REF` | `v0.7.4` | Baseline `unilink` tag or commit |
+| `CANDIDATE_REF` | `v0.7.5` | Candidate `unilink` tag or commit |
+| `COMPARISON_DIR` | `build/comparison` | Output directory for per-ref results and summary |
+| `BUILD_ROOT` | `build/comparison-builds` | Per-ref CMake build directory root |
+| `PAYLOAD_SIZES` | `64 256 1024 4096 16384 65536` | Payload sizes to test |
+| `REPEATS` | `3` | Repeated runs per payload |
+| `ITERATIONS` | `10000` | Measured latency iterations per run |
+| `WARMUP_ITERATIONS` | `1000` | Unmeasured warmup iterations per run |
+| `DURATION` | `3` | Seconds per strategy run |
+| `UDP_MAX_PAYLOAD_SIZE` | `1024` | Skip UDP latency runs above this payload size; `0` disables the cap |
+| `BUILD_JOBS` | unset | Optional CMake build parallelism |
 
 ## Script Configuration
 
