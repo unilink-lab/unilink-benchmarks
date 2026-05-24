@@ -52,6 +52,22 @@ on:
         description: "Strategy benchmark duration in seconds"
         required: true
         default: "3"
+      udp_payload_smoke_sizes:
+        description: "Space-separated UDP payload smoke sizes"
+        required: true
+        default: "1024 4096 16384"
+      udp_payload_smoke_iterations:
+        description: "UDP payload smoke iterations"
+        required: true
+        default: "1000"
+      udp_payload_smoke_warmup_iterations:
+        description: "UDP payload smoke warmup iterations"
+        required: true
+        default: "100"
+      udp_payload_smoke_timeout_ms:
+        description: "UDP payload smoke timeout in milliseconds"
+        required: true
+        default: "1000"
 
 permissions:
   contents: write
@@ -84,6 +100,10 @@ jobs:
           WARMUP_ITERATIONS: ${{ inputs.warmup_iterations }}
           UDP_MAX_PAYLOAD_SIZE: ${{ inputs.udp_max_payload_size }}
           DURATION: ${{ inputs.strategy_duration }}
+          UDP_PAYLOAD_SMOKE_SIZES: ${{ inputs.udp_payload_smoke_sizes }}
+          UDP_PAYLOAD_SMOKE_ITERATIONS: ${{ inputs.udp_payload_smoke_iterations }}
+          UDP_PAYLOAD_SMOKE_WARMUP_ITERATIONS: ${{ inputs.udp_payload_smoke_warmup_iterations }}
+          UDP_PAYLOAD_SMOKE_TIMEOUT_MS: ${{ inputs.udp_payload_smoke_timeout_ms }}
         run: |
           set -euo pipefail
           result_dir="build/release-results"
@@ -98,6 +118,14 @@ jobs:
           OUTPUT="${result_dir}/strategy_sweep.csv" \
           SUMMARY="${result_dir}/strategy_sweep_summary.md" \
           ./scripts/run_strategy_sweep.sh
+
+          OUTPUT="${result_dir}/udp_payload_smoke.csv" \
+          SUMMARY="${result_dir}/udp_payload_smoke_summary.md" \
+          PAYLOAD_SIZES="${UDP_PAYLOAD_SMOKE_SIZES}" \
+          ITERATIONS="${UDP_PAYLOAD_SMOKE_ITERATIONS}" \
+          WARMUP_ITERATIONS="${UDP_PAYLOAD_SMOKE_WARMUP_ITERATIONS}" \
+          TIMEOUT_MS="${UDP_PAYLOAD_SMOKE_TIMEOUT_MS}" \
+          ./scripts/run_udp_payload_smoke.sh
 
       - name: Generate release notes
         run: >
