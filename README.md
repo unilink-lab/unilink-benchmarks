@@ -144,12 +144,19 @@ Defaults:
 - measured iterations per run: `10000`
 - warmup iterations per run: `1000`
 - UDP latency payload cap: `1024`
+- outlier thresholds: `5000 10000 50000` us
 
 Override with environment variables:
 
 ```bash
 PAYLOAD_SIZES="64 1024 65536" REPEATS=5 ITERATIONS=50000 WARMUP_ITERATIONS=1000 \
   ./scripts/run_latency_matrix.sh
+```
+
+Configure tail-latency outlier thresholds in microseconds:
+
+```bash
+OUTLIER_THRESHOLDS_US="5000 10000 50000" ./scripts/run_latency_matrix.sh
 ```
 
 UDP latency defaults to payloads up to 1024 bytes because `unilink` 0.7.2 UDP echo does not reliably return larger
@@ -344,6 +351,7 @@ Latency matrix environment variables:
 | `ITERATIONS` | `10000` | Measured latency iterations per run |
 | `WARMUP_ITERATIONS` | `1000` | Unmeasured warmup iterations per run |
 | `UDP_MAX_PAYLOAD_SIZE` | `1024` | Skip UDP latency runs above this payload size; `0` disables the cap |
+| `OUTLIER_THRESHOLDS_US` | `5000 10000 50000` | Outlier thresholds in microseconds |
 | `OUTPUT` | `build/latency_matrix.csv` | Raw CSV output path |
 | `SUMMARY` | `build/latency_matrix_summary.md` | Median summary output path |
 
@@ -386,7 +394,11 @@ Each benchmark reports:
 - elapsed time
 - messages/sec
 - MiB/sec
-- latency min / avg / p50 / p95 / p99 / max
+- latency min / avg / p50 / p95 / p99 / p99.9 / max
+- outlier counts over configured thresholds
+
+Outlier counts use `latency_us > threshold_us`. Summary tables use the median across repeated runs, matching existing
+latency summary behavior. These counts help distinguish one-off max spikes from repeated tail-latency behavior.
 
 The strategy benchmark reports:
 

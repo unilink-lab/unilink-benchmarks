@@ -6,6 +6,7 @@
 #include <iostream>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 
 #include "common/bench_stats.hpp"
@@ -46,14 +47,22 @@ inline void append_latency_csv(const std::string& path, const LatencyResult& res
 
   if (write_header) {
     output << "transport,payload_size,iterations,warmup_iterations,elapsed_s,messages_sec,mib_sec,min_us,avg_us,p50_us,"
-              "p95_us,p99_us,max_us\n";
+              "p95_us,p99_us,p99_9_us,max_us";
+    for (const auto& outlier : result.stats.outliers) {
+      output << ",outliers_over_" << outlier.threshold_us << "us";
+    }
+    output << "\n";
   }
 
   output << result.transport << "," << result.payload_size << "," << result.iterations << ","
          << result.warmup_iterations << "," << std::fixed << std::setprecision(6) << result.elapsed_seconds << ","
          << result.messages_per_sec << "," << result.mib_per_sec << "," << result.stats.min_us << ","
          << result.stats.avg_us << "," << result.stats.p50_us << "," << result.stats.p95_us << ","
-         << result.stats.p99_us << "," << result.stats.max_us << "\n";
+         << result.stats.p99_us << "," << result.stats.p99_9_us << "," << result.stats.max_us;
+  for (const auto& outlier : result.stats.outliers) {
+    output << "," << outlier.count;
+  }
+  output << "\n";
 }
 
 inline void print_result(const LatencyResult& result, const std::optional<std::string>& csv_output = std::nullopt) {
@@ -71,7 +80,11 @@ inline void print_result(const LatencyResult& result, const std::optional<std::s
   std::cout << "  p50: " << result.stats.p50_us << "\n";
   std::cout << "  p95: " << result.stats.p95_us << "\n";
   std::cout << "  p99: " << result.stats.p99_us << "\n";
+  std::cout << "  p99.9: " << result.stats.p99_9_us << "\n";
   std::cout << "  max: " << result.stats.max_us << "\n";
+  for (const auto& outlier : result.stats.outliers) {
+    std::cout << "  outliers_over_" << outlier.threshold_us << "us: " << outlier.count << "\n";
+  }
 
   if (csv_output) {
     append_latency_csv(*csv_output, result);

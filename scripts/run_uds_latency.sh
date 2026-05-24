@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/bench_common.sh"
-BIN_DIR="${ROOT_DIR}/build/bin"
+UNILINK_BENCH_BUILD_DIR="${UNILINK_BENCH_BUILD_DIR:-${ROOT_DIR}/build}"
+BIN_DIR="${UNILINK_BENCH_BUILD_DIR}/bin"
 SOCKET_PATH="${SOCKET_PATH:-/tmp/unilink_bench.sock}"
 PAYLOAD_SIZE="${PAYLOAD_SIZE:-1024}"
 ITERATIONS="${ITERATIONS:-100000}"
