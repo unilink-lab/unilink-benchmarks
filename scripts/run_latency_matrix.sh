@@ -11,8 +11,10 @@ REPEATS="${REPEATS:-3}"
 ITERATIONS="${ITERATIONS:-10000}"
 WARMUP_ITERATIONS="${WARMUP_ITERATIONS:-1000}"
 UDP_MAX_PAYLOAD_SIZE="${UDP_MAX_PAYLOAD_SIZE:-1024}"
+OUTLIER_THRESHOLDS_US="${OUTLIER_THRESHOLDS_US:-5000 10000 50000}"
 OUTPUT="${OUTPUT:-${ROOT_DIR}/build/latency_matrix.csv}"
 SUMMARY="${SUMMARY:-${ROOT_DIR}/build/latency_matrix_summary.md}"
+export OUTLIER_THRESHOLDS_US
 
 mkdir -p "$(dirname "${OUTPUT}")"
 rm -f "${OUTPUT}" "${SUMMARY}" "${OUTPUT}.meta"
@@ -24,6 +26,7 @@ write_metadata "${OUTPUT}.meta"
   echo "iterations,${ITERATIONS}"
   echo "warmup_iterations,${WARMUP_ITERATIONS}"
   echo "udp_max_payload_size,${UDP_MAX_PAYLOAD_SIZE}"
+  echo "outlier_thresholds_us,${OUTLIER_THRESHOLDS_US}"
 } >>"${OUTPUT}.meta"
 
 run_id=0

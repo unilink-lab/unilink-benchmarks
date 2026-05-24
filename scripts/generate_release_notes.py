@@ -43,6 +43,13 @@ def read_section(path, fallback):
     return content if content else fallback
 
 
+def strip_markdown_heading(content, heading):
+    lines = content.splitlines()
+    if lines and lines[0].strip() == heading:
+        return "\n".join(lines[1:]).lstrip()
+    return content
+
+
 def value_or_unknown(value):
     return value if value not in (None, "", "None") else "unknown"
 
@@ -110,6 +117,13 @@ def build_notes(result_dir, unilink_ref, platform_suffix, reference_platform):
         "## Strategy Summary",
         "",
         read_section(result_dir / "strategy_sweep_summary.md", "_Strategy summary was not generated._"),
+        "",
+        "## UDP Payload Smoke Summary",
+        "",
+        strip_markdown_heading(
+            read_section(result_dir / "udp_payload_smoke_summary.md", "_UDP payload smoke summary was not generated._"),
+            "# UDP Payload Smoke Summary",
+        ),
         "",
         "## Notes",
         "",

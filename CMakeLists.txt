@@ -49,6 +49,36 @@ if(UNILINK_BENCH_UNILINK_SOURCE_PATH)
   )
 endif()
 
+include(CheckCXXSourceCompiles)
+
+get_target_property(
+  UNILINK_BENCH_UNILINK_INCLUDE_DIRS
+  unilink::unilink
+  INTERFACE_INCLUDE_DIRECTORIES
+)
+set(CMAKE_REQUIRED_INCLUDES ${UNILINK_BENCH_UNILINK_INCLUDE_DIRS})
+check_cxx_source_compiles(
+  "
+  #include <unilink/unilink.hpp>
+  #include <utility>
+
+  int main() {
+    using Stats = decltype(std::declval<unilink::TcpClient&>().stats());
+    (void)sizeof(decltype(std::declval<Stats&>().messages_accepted));
+    (void)sizeof(decltype(std::declval<Stats&>().dropped_messages));
+    return 0;
+  }
+  "
+  UNILINK_BENCH_HAS_RUNTIME_STATS
+)
+unset(CMAKE_REQUIRED_INCLUDES)
+
+if(UNILINK_BENCH_HAS_RUNTIME_STATS)
+  set(UNILINK_BENCH_RUNTIME_STATS_SUPPORTED 1)
+else()
+  set(UNILINK_BENCH_RUNTIME_STATS_SUPPORTED 0)
+endif()
+
 file(
   WRITE "${CMAKE_BINARY_DIR}/unilink_bench_metadata.csv"
   "key,value\n"
@@ -56,6 +86,7 @@ file(
   "unilink_requested_ref,${UNILINK_BENCH_UNILINK_REQUESTED_REF}\n"
   "unilink_source_path,${UNILINK_BENCH_UNILINK_SOURCE_PATH}\n"
   "unilink_commit,${UNILINK_BENCH_UNILINK_COMMIT}\n"
+  "runtime_stats_supported,${UNILINK_BENCH_RUNTIME_STATS_SUPPORTED}\n"
 )
 
 add_library(unilink_bench_common INTERFACE)
@@ -72,6 +103,10 @@ add_unilink_benchmark(bench_tcp_echo_server benchmarks/tcp/tcp_echo_server.cpp)
 add_unilink_benchmark(bench_tcp_latency_client benchmarks/tcp/tcp_latency_client.cpp)
 add_unilink_benchmark(bench_udp_echo_server benchmarks/udp/udp_echo_server.cpp)
 add_unilink_benchmark(bench_udp_latency_client benchmarks/udp/udp_latency_client.cpp)
+add_unilink_benchmark(bench_udp_payload_smoke benchmarks/udp/udp_payload_smoke.cpp)
 add_unilink_benchmark(bench_uds_echo_server benchmarks/uds/uds_echo_server.cpp)
 add_unilink_benchmark(bench_uds_latency_client benchmarks/uds/uds_latency_client.cpp)
 add_unilink_benchmark(bench_strategy_matrix benchmarks/strategy/strategy_matrix.cpp)
+if(UNILINK_BENCH_HAS_RUNTIME_STATS)
+  target_compile_definitions(bench_strategy_matrix PRIVATE UNILINK_BENCH_HAS_RUNTIME_STATS=1)
+endif()

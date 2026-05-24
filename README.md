@@ -144,6 +144,7 @@ Defaults:
 - measured iterations per run: `10000`
 - warmup iterations per run: `1000`
 - UDP latency payload cap: `1024`
+- outlier thresholds: `5000 10000 50000` us
 
 Override with environment variables:
 
@@ -173,7 +174,8 @@ unilink supports two backpressure strategies:
 - `Reliable`: waits for queue pressure to clear and prioritizes delivery.
 - `BestEffort`: avoids blocking and may drop data under pressure.
 
-Use the strategy benchmark to compare accepted throughput, received throughput, delivery rate, and failed sends.
+Use the strategy benchmark to compare accepted throughput, received throughput, delivery rate, failed sends, and
+RuntimeStats-derived queue/drop metrics when the selected `unilink` ref supports them.
 This is a one-way streaming benchmark, not an echo latency benchmark:
 
 ```bash
@@ -205,6 +207,33 @@ build/strategy_sweep.csv
 build/strategy_sweep_summary.md
 build/strategy_sweep.csv.meta
 ```
+
+## UDP Payload Smoke
+
+Use the UDP payload smoke benchmark to distinguish large-datagram echo behavior from strategy pressure benchmark
+behavior:
+
+```bash
+./scripts/run_udp_payload_smoke.sh
+```
+
+Defaults:
+
+- payload sizes: `1024 4096 16384`
+- measured iterations: `1000`
+- warmup iterations: `100`
+- timeout: `1000 ms`
+- strategies: `Reliable` and `BestEffort`
+
+Output files:
+
+```text
+build/udp_payload_smoke.csv
+build/udp_payload_smoke_summary.md
+```
+
+If strategy benchmarks report zero delivery for larger UDP payloads, run this smoke benchmark in the same environment
+to classify whether single/few datagram echo works before changing the core library.
 
 ## Saving Results
 
@@ -278,6 +307,8 @@ latency_matrix.csv.meta
 strategy_sweep.csv
 strategy_sweep_summary.md
 strategy_sweep.csv.meta
+udp_payload_smoke.csv
+udp_payload_smoke_summary.md
 environment.txt
 hardware.json
 manifest.json
@@ -291,7 +322,7 @@ On Jetson systems it also records device-tree model, L4T release, `nvpmodel -q`,
 zone readings when available.
 
 The GitHub Release body is generated from `release_notes.md` and includes the benchmark target, runner summary, latency
-summary table, strategy summary table, and run notes.
+summary table, strategy summary table, UDP payload smoke summary, and run notes.
 
 The release upload step uses the GitHub CLI (`gh`) on the self-hosted runner. If `gh` is not installed, the workflow
 artifact is still the right fallback output to keep from the run.
@@ -314,6 +345,7 @@ Latency matrix environment variables:
 | `ITERATIONS` | `10000` | Measured latency iterations per run |
 | `WARMUP_ITERATIONS` | `1000` | Unmeasured warmup iterations per run |
 | `UDP_MAX_PAYLOAD_SIZE` | `1024` | Skip UDP latency runs above this payload size; `0` disables the cap |
+| `OUTLIER_THRESHOLDS_US` | `5000 10000 50000` | Outlier thresholds in microseconds |
 | `OUTPUT` | `build/latency_matrix.csv` | Raw CSV output path |
 | `SUMMARY` | `build/latency_matrix_summary.md` | Median summary output path |
 
@@ -333,6 +365,20 @@ Strategy sweep environment variables:
 | `OUTPUT` | `build/strategy_sweep.csv` | Raw CSV output path |
 | `SUMMARY` | `build/strategy_sweep_summary.md` | Median summary output path |
 
+UDP payload smoke environment variables:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `HOST` | `127.0.0.1` | UDP loopback host |
+| `PORT` | `9401` | Base UDP server port |
+| `PAYLOAD_SIZES` | `1024 4096 16384` | Payload sizes to test |
+| `ITERATIONS` | `1000` | Measured sends per payload |
+| `WARMUP_ITERATIONS` | `100` | Unmeasured warmup sends per payload |
+| `TIMEOUT_MS` | `1000` | Echo timeout per send |
+| `STRATEGY` | `both` | `reliable`, `besteffort`, or `both` |
+| `OUTPUT` | `build/udp_payload_smoke.csv` | Raw CSV output path |
+| `SUMMARY` | `build/udp_payload_smoke_summary.md` | Markdown summary output path |
+
 ## Metrics
 
 Each benchmark reports:
@@ -342,7 +388,11 @@ Each benchmark reports:
 - elapsed time
 - messages/sec
 - MiB/sec
-- latency min / avg / p50 / p95 / p99 / max
+- latency min / avg / p50 / p95 / p99 / p99.9 / max
+- outlier counts over configured thresholds
+
+Outlier counts use `latency_us > threshold_us`. Summary tables use the median across repeated runs, matching existing
+latency summary behavior. These counts help distinguish one-off max spikes from repeated tail-latency behavior.
 
 The strategy benchmark reports:
 
@@ -350,6 +400,24 @@ The strategy benchmark reports:
 - received MiB/sec
 - delivery rate
 - failed sends
+
+The UDP payload smoke benchmark reports:
+
+- send success
+- server received count
+- client echo received count
+- echo match count
+- timeout count
+- delivery percentage
+- match percentage
+- dropped messages
+- dropped bytes
+- backpressure events
+- max queued bytes
+- final queued bytes
+
+RuntimeStats columns are populated only when the selected `unilink` ref supports the `stats()` API. Older refs are still
+supported; stats columns are marked as unavailable in the summary.
 
 ## Notes
 
