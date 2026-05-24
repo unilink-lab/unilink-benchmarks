@@ -119,6 +119,14 @@ jobs:
           SUMMARY="${result_dir}/strategy_sweep_summary.md" \
           ./scripts/run_strategy_sweep.sh
 
+          OUTPUT="${result_dir}/raw_udp_payload_smoke.csv" \
+          SUMMARY="${result_dir}/raw_udp_payload_smoke_summary.md" \
+          PAYLOAD_SIZES="${UDP_PAYLOAD_SMOKE_SIZES}" \
+          ITERATIONS="${UDP_PAYLOAD_SMOKE_ITERATIONS}" \
+          WARMUP_ITERATIONS="${UDP_PAYLOAD_SMOKE_WARMUP_ITERATIONS}" \
+          TIMEOUT_MS="${UDP_PAYLOAD_SMOKE_TIMEOUT_MS}" \
+          ./scripts/run_raw_udp_payload_smoke.sh
+
           OUTPUT="${result_dir}/udp_payload_smoke.csv" \
           SUMMARY="${result_dir}/udp_payload_smoke_summary.md" \
           PAYLOAD_SIZES="${UDP_PAYLOAD_SMOKE_SIZES}" \

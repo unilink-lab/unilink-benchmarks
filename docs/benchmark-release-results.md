@@ -119,11 +119,12 @@ The workflow will:
 4. collect runner environment and hardware metadata;
 5. run the latency matrix;
 6. run the strategy sweep;
-7. generate human-readable release notes from the summary files and runner metadata;
-8. package the result files into a tarball;
-9. upload the tarball as a workflow artifact;
-10. upload the tarball to a GitHub Release when `publish_release=true` and `unilink_ref` starts with `v`;
-11. create or update the GitHub Release body with the generated summary.
+7. run raw UDP and unilink UDP payload smoke diagnostics;
+8. generate human-readable release notes from the summary files and runner metadata;
+9. package the result files into a tarball;
+10. upload the tarball as a workflow artifact;
+11. upload the tarball to a GitHub Release when `publish_release=true` and `unilink_ref` starts with `v`;
+12. create or update the GitHub Release body with the generated summary.
 
 The default UDP latency payload cap is 1024 bytes because larger UDP datagrams may be benchmark-model and environment
 sensitive. Set `udp_max_payload_size` to `0` only when intentionally validating a version or environment where larger
@@ -178,6 +179,8 @@ latency_matrix.csv.meta
 strategy_sweep.csv
 strategy_sweep_summary.md
 strategy_sweep.csv.meta
+raw_udp_payload_smoke.csv
+raw_udp_payload_smoke_summary.md
 udp_payload_smoke.csv
 udp_payload_smoke_summary.md
 environment.txt
@@ -187,8 +190,8 @@ release_notes.md
 ```
 
 The GitHub Release body is generated from `release_notes.md`. It includes the benchmark target, resolved commit,
-self-hosted runner hardware summary, latency summary table, strategy summary table, UDP payload smoke summary, and run
-notes.
+self-hosted runner hardware summary, latency summary table, strategy summary table, raw UDP control summary, unilink UDP
+payload smoke summary, and run notes.
 
 ## Metadata Files
 
@@ -246,6 +249,12 @@ For strategy benchmarks, compare:
 
 `Reliable` and `BestEffort` are not expected to produce the same shape of result. `Reliable` prioritizes delivery under
 pressure, while `BestEffort` prioritizes non-blocking sends and may drop data.
+
+For UDP smoke diagnostics, use the raw UDP control and unilink UDP smoke together:
+
+- raw UDP succeeds + unilink UDP fails: investigate the unilink UDP path;
+- raw UDP fails + unilink UDP fails: investigate environment, OS, WSL2, socket buffer, or datagram behavior;
+- raw UDP succeeds + unilink UDP succeeds + strategy fails: investigate the pressure benchmark model.
 
 ## When to Re-Run
 

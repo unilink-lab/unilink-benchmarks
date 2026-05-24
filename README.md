@@ -235,6 +235,32 @@ build/udp_payload_smoke_summary.md
 If strategy benchmarks report zero delivery for larger UDP payloads, run this smoke benchmark in the same environment
 to classify whether single/few datagram echo works before changing the core library.
 
+## Raw UDP Payload Smoke
+
+Use raw UDP payload smoke to distinguish environment-level datagram behavior from unilink UDP wrapper behavior:
+
+```bash
+./scripts/run_raw_udp_payload_smoke.sh
+```
+
+Defaults:
+
+- payload sizes: `1024 4096 16384`
+- measured iterations: `1000`
+- warmup iterations: `100`
+- timeout: `1000 ms`
+
+Output files:
+
+```text
+build/raw_udp_payload_smoke.csv
+build/raw_udp_payload_smoke_summary.md
+```
+
+If raw UDP succeeds for 4096/16384 but unilink UDP smoke fails, investigate unilink UDP transport/wrapper behavior.
+
+If both raw UDP and unilink UDP fail, investigate OS, WSL2, socket buffer, or datagram behavior.
+
 ## Saving Results
 
 Generated files under `build/` are local artifacts and are ignored by Git.
@@ -307,6 +333,8 @@ latency_matrix.csv.meta
 strategy_sweep.csv
 strategy_sweep_summary.md
 strategy_sweep.csv.meta
+raw_udp_payload_smoke.csv
+raw_udp_payload_smoke_summary.md
 udp_payload_smoke.csv
 udp_payload_smoke_summary.md
 environment.txt
@@ -322,7 +350,7 @@ On Jetson systems it also records device-tree model, L4T release, `nvpmodel -q`,
 zone readings when available.
 
 The GitHub Release body is generated from `release_notes.md` and includes the benchmark target, runner summary, latency
-summary table, strategy summary table, UDP payload smoke summary, and run notes.
+summary table, strategy summary table, raw UDP control summary, unilink UDP payload smoke summary, and run notes.
 
 The release upload step uses the GitHub CLI (`gh`) on the self-hosted runner. If `gh` is not installed, the workflow
 artifact is still the right fallback output to keep from the run.
@@ -379,6 +407,19 @@ UDP payload smoke environment variables:
 | `OUTPUT` | `build/udp_payload_smoke.csv` | Raw CSV output path |
 | `SUMMARY` | `build/udp_payload_smoke_summary.md` | Markdown summary output path |
 
+Raw UDP payload smoke environment variables:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `HOST` | `127.0.0.1` | UDP loopback host |
+| `PORT` | `9501` | Raw UDP server port |
+| `PAYLOAD_SIZES` | `1024 4096 16384` | Payload sizes to test |
+| `ITERATIONS` | `1000` | Measured sends per payload |
+| `WARMUP_ITERATIONS` | `100` | Unmeasured warmup sends per payload |
+| `TIMEOUT_MS` | `1000` | Echo timeout per send |
+| `OUTPUT` | `build/raw_udp_payload_smoke.csv` | Raw CSV output path |
+| `SUMMARY` | `build/raw_udp_payload_smoke_summary.md` | Markdown summary output path |
+
 ## Metrics
 
 Each benchmark reports:
@@ -418,6 +459,9 @@ The UDP payload smoke benchmark reports:
 
 RuntimeStats columns are populated only when the selected `unilink` ref supports the `stats()` API. Older refs are still
 supported; stats columns are marked as unavailable in the summary.
+
+The raw UDP payload smoke benchmark reports the same send, server receive, client receive, match, timeout, delivery, and
+match percentages without using any unilink API.
 
 ## Notes
 

@@ -18,6 +18,10 @@ def as_float(row, field):
         return 0.0
 
 
+def as_bool(row, field):
+    return str(row.get(field, "")).strip().lower() in ("1", "true", "yes")
+
+
 def build_notes(rows):
     notes = []
     for row in rows:
@@ -28,6 +32,8 @@ def build_notes(rows):
         echo_matches = as_int(row, "echo_matches")
         send_attempts = as_int(row, "send_attempts")
         iterations = as_int(row, "iterations")
+        stopped_early = as_bool(row, "stopped_early") or (iterations > 0 and send_attempts < iterations)
+        stop_reason = row.get("stop_reason", "") or "unknown"
 
         if payload == 4096 and client_received == 0:
             notes.append(
@@ -49,9 +55,10 @@ def build_notes(rows):
                 "- Echo payload mismatch detected. This suggests payload corruption, truncation, or benchmark "
                 "payload reconstruction behavior should be investigated."
             )
-        if iterations > 0 and send_attempts < iterations:
+        if stopped_early:
             notes.append(
-                "- One or more rows stopped early after repeated timeouts to keep diagnostic runs bounded."
+                f"- One or more rows stopped early after repeated timeouts to keep diagnostic runs bounded "
+                f"(`stop_reason={stop_reason}`)."
             )
 
     if not notes:
@@ -84,6 +91,36 @@ def render(rows):
 
     lines.extend(["", "## Notes", ""])
     lines.extend(build_notes(rows))
+
+    lines.extend(
+        [
+            "",
+            "## Classification Guide",
+            "",
+            "- raw UDP succeeds + unilink UDP fails -> investigate the unilink UDP path.",
+            "- raw UDP fails + unilink UDP fails -> investigate environment, OS, WSL2, socket buffer, or datagram behavior.",
+            "- raw UDP succeeds + unilink UDP succeeds + strategy fails -> investigate the pressure benchmark model.",
+        ]
+    )
+
+    if rows and "runtime_stats_supported" in rows[0]:
+        lines.extend(["", "## RuntimeStats", ""])
+        if any(as_bool(row, "runtime_stats_supported") for row in rows):
+            lines.extend(
+                [
+                    "| strategy | payload | client failed sends | client drops | server messages received | server bytes received | server failed sends | server drops |",
+                    "|---|---:|---:|---:|---:|---:|---:|---:|",
+                ]
+            )
+            for row in rows:
+                lines.append(
+                    f"| {row.get('strategy', '')} | {as_int(row, 'payload_size')} | "
+                    f"{as_int(row, 'client_failed_sends')} | {as_int(row, 'client_dropped_messages')} | "
+                    f"{as_int(row, 'server_messages_received')} | {as_int(row, 'server_bytes_received')} | "
+                    f"{as_int(row, 'server_failed_sends')} | {as_int(row, 'server_dropped_messages')} |"
+                )
+        else:
+            lines.append("- RuntimeStats columns are present but unavailable for this selected `unilink` ref.")
     return "\n".join(lines).rstrip() + "\n"
 
 

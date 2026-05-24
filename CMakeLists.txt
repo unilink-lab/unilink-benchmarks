@@ -50,6 +50,7 @@ if(UNILINK_BENCH_UNILINK_SOURCE_PATH)
 endif()
 
 include(CheckCXXSourceCompiles)
+find_package(Threads REQUIRED)
 
 get_target_property(
   UNILINK_BENCH_UNILINK_INCLUDE_DIRS
@@ -107,6 +108,11 @@ add_unilink_benchmark(bench_udp_payload_smoke benchmarks/udp/udp_payload_smoke.c
 add_unilink_benchmark(bench_uds_echo_server benchmarks/uds/uds_echo_server.cpp)
 add_unilink_benchmark(bench_uds_latency_client benchmarks/uds/uds_latency_client.cpp)
 add_unilink_benchmark(bench_strategy_matrix benchmarks/strategy/strategy_matrix.cpp)
+
+add_executable(bench_raw_udp_payload_smoke benchmarks/udp/raw_udp_payload_smoke.cpp)
+target_include_directories(bench_raw_udp_payload_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks)
+target_link_libraries(bench_raw_udp_payload_smoke PRIVATE Threads::Threads)
 if(UNILINK_BENCH_HAS_RUNTIME_STATS)
+  target_compile_definitions(bench_udp_payload_smoke PRIVATE UNILINK_BENCH_HAS_RUNTIME_STATS=1)
   target_compile_definitions(bench_strategy_matrix PRIVATE UNILINK_BENCH_HAS_RUNTIME_STATS=1)
 endif()
