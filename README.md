@@ -74,7 +74,7 @@ Specify a released version tag or commit id for reproducible benchmark runs:
 ```bash
 cmake -S . -B build \
   -DUNILINK_BENCH_USE_FETCHCONTENT=ON \
-  -DUNILINK_BENCH_UNILINK_GIT_TAG=v0.7.2
+  -DUNILINK_BENCH_UNILINK_GIT_TAG=v0.7.5
 cmake --build build
 ```
 
@@ -152,9 +152,9 @@ PAYLOAD_SIZES="64 1024 65536" REPEATS=5 ITERATIONS=50000 WARMUP_ITERATIONS=1000 
   ./scripts/run_latency_matrix.sh
 ```
 
-UDP latency defaults to payloads up to 1024 bytes because `unilink` 0.7.2 UDP echo does not reliably return larger
-payloads in this benchmark model. Set `UDP_MAX_PAYLOAD_SIZE=0` to disable the cap for versions or environments where
-larger UDP datagrams are expected to work.
+UDP latency defaults to payloads up to 1024 bytes because larger UDP datagrams may be benchmark-model and environment
+sensitive. Set `UDP_MAX_PAYLOAD_SIZE=0` only when intentionally validating a version or environment where larger UDP
+datagrams are expected to work.
 
 The matrix script writes CSV, a median summary table, and a small metadata file under `build/`.
 
@@ -242,17 +242,17 @@ repository. The `Benchmark Release` workflow is intended for a self-hosted runne
 Actions -> Benchmark Release -> Run workflow
 ```
 
-Recommended input for the `unilink` 0.7.2 baseline:
+Recommended input for the `unilink` 0.7.5 baseline:
 
 ```text
-unilink_ref: v0.7.2
+unilink_ref: v0.7.5
 publish_release: true
 ```
 
 Recommended input for a Jetson Orin Nano Super reference baseline:
 
 ```text
-unilink_ref: v0.7.2
+unilink_ref: v0.7.5
 runner_labels: ["self-hosted","Linux","ARM64","jetson-orin-nano-super"]
 platform_suffix: linux-arm64-jetson-orin-nano-super
 release_suffix: jetson-orin-nano-super
@@ -265,8 +265,8 @@ sweeps, uploads a workflow artifact, and uploads release assets when the ref loo
 this naming pattern:
 
 ```text
-benchmark-unilink-v0.7.2
-benchmark-unilink-v0.7.2-jetson-orin-nano-super
+benchmark-unilink-v0.7.5
+benchmark-unilink-v0.7.5-jetson-orin-nano-super
 ```
 
 Each release artifact contains:
