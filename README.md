@@ -173,7 +173,8 @@ unilink supports two backpressure strategies:
 - `Reliable`: waits for queue pressure to clear and prioritizes delivery.
 - `BestEffort`: avoids blocking and may drop data under pressure.
 
-Use the strategy benchmark to compare accepted throughput, received throughput, delivery rate, and failed sends.
+Use the strategy benchmark to compare accepted throughput, received throughput, delivery rate, failed sends, and
+RuntimeStats-derived queue/drop metrics when the selected `unilink` ref supports them.
 This is a one-way streaming benchmark, not an echo latency benchmark:
 
 ```bash
@@ -403,6 +404,14 @@ The UDP payload smoke benchmark reports:
 - timeout count
 - delivery percentage
 - match percentage
+- dropped messages
+- dropped bytes
+- backpressure events
+- max queued bytes
+- final queued bytes
+
+RuntimeStats columns are populated only when the selected `unilink` ref supports the `stats()` API. Older refs are still
+supported; stats columns are marked as unavailable in the summary.
 
 ## Notes
 
