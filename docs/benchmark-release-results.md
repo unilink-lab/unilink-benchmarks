@@ -26,22 +26,22 @@ Release assets are a better fit for official version baselines because they are:
 Use a benchmark-specific release tag so it is clear that the release belongs to this benchmark repository, not the core
 `unilink` library package.
 
-For `unilink` 0.7.2:
+For `unilink` 0.7.5:
 
 ```text
-benchmark-unilink-v0.7.2
+benchmark-unilink-v0.7.5
 ```
 
 For a Jetson Orin Nano Super reference result:
 
 ```text
-benchmark-unilink-v0.7.2-jetson-orin-nano-super
+benchmark-unilink-v0.7.5-jetson-orin-nano-super
 ```
 
 Recommended release title:
 
 ```text
-Benchmark results for unilink v0.7.2
+Benchmark results for unilink v0.7.5
 ```
 
 ## Self-Hosted Runner
@@ -64,7 +64,7 @@ For Jetson Orin Nano Super, register the runner with ARM64 and a board-specific 
 The runner should have:
 
 - CMake;
-- a C++17-capable compiler;
+- a C++20-capable compiler;
 - Git;
 - Python 3;
 - Bash;
@@ -80,10 +80,10 @@ Open:
 Actions -> Benchmark Release -> Run workflow
 ```
 
-For the `unilink` 0.7.2 baseline, use:
+For the `unilink` 0.7.5 baseline, use:
 
 ```text
-unilink_ref: v0.7.2
+unilink_ref: v0.7.5
 runner_labels: ["self-hosted","Linux","X64"]
 publish_release: true
 payload_sizes: 64 256 1024 4096 16384 65536
@@ -97,7 +97,7 @@ strategy_duration: 3
 For a Jetson Orin Nano Super reference baseline, use:
 
 ```text
-unilink_ref: v0.7.2
+unilink_ref: v0.7.5
 runner_labels: ["self-hosted","Linux","ARM64","jetson-orin-nano-super"]
 platform_suffix: linux-arm64-jetson-orin-nano-super
 release_suffix: jetson-orin-nano-super
@@ -125,9 +125,9 @@ The workflow will:
 10. upload the tarball to a GitHub Release when `publish_release=true` and `unilink_ref` starts with `v`;
 11. create or update the GitHub Release body with the generated summary.
 
-The default UDP latency payload cap is 1024 bytes. This keeps the `unilink` 0.7.2 baseline runnable because UDP echo
-payloads larger than 1024 bytes do not reliably return in this benchmark model. Set `udp_max_payload_size` to `0` only
-when intentionally validating a version or environment where larger UDP datagrams are expected to work.
+The default UDP latency payload cap is 1024 bytes because larger UDP datagrams may be benchmark-model and environment
+sensitive. Set `udp_max_payload_size` to `0` only when intentionally validating a version or environment where larger
+UDP datagrams are expected to work.
 
 For Jetson baseline runs, keep power mode, clock state, cooling, and background system load controlled. The environment
 collector records Jetson-specific information when available, including device-tree model, L4T release, `nvpmodel -q`,
@@ -158,15 +158,15 @@ unilink-<ref>-linux-x64-self-hosted.tar.gz.sha256
 For example:
 
 ```text
-unilink-v0.7.2-linux-x64-self-hosted.tar.gz
-unilink-v0.7.2-linux-x64-self-hosted.tar.gz.sha256
+unilink-v0.7.5-linux-x64-self-hosted.tar.gz
+unilink-v0.7.5-linux-x64-self-hosted.tar.gz.sha256
 ```
 
 For Jetson Orin Nano Super:
 
 ```text
-unilink-v0.7.2-linux-arm64-jetson-orin-nano-super.tar.gz
-unilink-v0.7.2-linux-arm64-jetson-orin-nano-super.tar.gz.sha256
+unilink-v0.7.5-linux-arm64-jetson-orin-nano-super.tar.gz
+unilink-v0.7.5-linux-arm64-jetson-orin-nano-super.tar.gz.sha256
 ```
 
 The tarball contains:
