@@ -178,6 +178,8 @@ latency_matrix.csv.meta
 strategy_sweep.csv
 strategy_sweep_summary.md
 strategy_sweep.csv.meta
+udp_payload_smoke.csv
+udp_payload_smoke_summary.md
 environment.txt
 hardware.json
 manifest.json
@@ -185,7 +187,8 @@ release_notes.md
 ```
 
 The GitHub Release body is generated from `release_notes.md`. It includes the benchmark target, resolved commit,
-self-hosted runner hardware summary, latency summary table, strategy summary table, and run notes.
+self-hosted runner hardware summary, latency summary table, strategy summary table, UDP payload smoke summary, and run
+notes.
 
 ## Metadata Files
 
