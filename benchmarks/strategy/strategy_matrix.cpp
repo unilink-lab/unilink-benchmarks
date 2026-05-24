@@ -28,6 +28,29 @@ struct StrategyResult {
   double accepted_mib_per_sec = 0.0;
   double received_mib_per_sec = 0.0;
   double delivery_rate = 0.0;
+  bool runtime_stats_supported = false;
+  uint64_t client_messages_accepted = 0;
+  uint64_t client_bytes_accepted = 0;
+  uint64_t client_messages_sent = 0;
+  uint64_t client_bytes_sent = 0;
+  uint64_t client_failed_sends = 0;
+  uint64_t client_dropped_messages = 0;
+  uint64_t client_dropped_bytes = 0;
+  uint64_t client_backpressure_events = 0;
+  size_t client_max_queued_bytes = 0;
+  size_t client_queued_bytes_final = 0;
+  size_t client_pending_bytes_final = 0;
+  bool client_backpressure_active_final = false;
+  uint64_t server_messages_received = 0;
+  uint64_t server_bytes_received = 0;
+  uint64_t server_failed_sends = 0;
+  uint64_t server_dropped_messages = 0;
+  uint64_t server_dropped_bytes = 0;
+  uint64_t server_backpressure_events = 0;
+  size_t server_max_queued_bytes = 0;
+  size_t server_queued_bytes_final = 0;
+  size_t server_pending_bytes_final = 0;
+  bool server_backpressure_active_final = false;
 };
 
 std::string strategy_name(Strategy strategy) {
@@ -56,6 +79,42 @@ StrategyResult make_result(std::string transport, Strategy strategy, size_t payl
           delivery_rate};
 }
 
+#ifdef UNILINK_BENCH_HAS_RUNTIME_STATS
+template <typename Client, typename Server>
+void record_runtime_stats(StrategyResult& result, const Client& client, const Server& server) {
+  const auto client_stats = client.stats();
+  const auto server_stats = server.stats();
+  result.runtime_stats_supported = true;
+
+  result.client_messages_accepted = client_stats.messages_accepted;
+  result.client_bytes_accepted = client_stats.bytes_accepted;
+  result.client_messages_sent = client_stats.messages_sent;
+  result.client_bytes_sent = client_stats.bytes_sent;
+  result.client_failed_sends = client_stats.failed_sends;
+  result.client_dropped_messages = client_stats.dropped_messages;
+  result.client_dropped_bytes = client_stats.dropped_bytes;
+  result.client_backpressure_events = client_stats.backpressure_events;
+  result.client_max_queued_bytes = client_stats.max_queued_bytes;
+  result.client_queued_bytes_final = client_stats.queued_bytes;
+  result.client_pending_bytes_final = client_stats.pending_bytes;
+  result.client_backpressure_active_final = client_stats.backpressure_active;
+
+  result.server_messages_received = server_stats.messages_received;
+  result.server_bytes_received = server_stats.bytes_received;
+  result.server_failed_sends = server_stats.failed_sends;
+  result.server_dropped_messages = server_stats.dropped_messages;
+  result.server_dropped_bytes = server_stats.dropped_bytes;
+  result.server_backpressure_events = server_stats.backpressure_events;
+  result.server_max_queued_bytes = server_stats.max_queued_bytes;
+  result.server_queued_bytes_final = server_stats.queued_bytes;
+  result.server_pending_bytes_final = server_stats.pending_bytes;
+  result.server_backpressure_active_final = server_stats.backpressure_active;
+}
+#else
+template <typename Client, typename Server>
+void record_runtime_stats(StrategyResult&, const Client&, const Server&) {}
+#endif
+
 bool file_is_empty_or_missing(const std::string& path) {
   std::ifstream input(path);
   return !input.good() || input.peek() == std::ifstream::traits_type::eof();
@@ -70,13 +129,30 @@ void append_strategy_csv(const std::string& path, const StrategyResult& result) 
 
   if (write_header) {
     output << "transport,strategy,payload_size,duration_s,accepted_messages,failed_sends,accepted_bytes,"
-              "received_bytes,accepted_mib_sec,received_mib_sec,delivery_rate\n";
+              "received_bytes,accepted_mib_sec,received_mib_sec,delivery_rate,runtime_stats_supported,"
+              "client_messages_accepted,client_bytes_accepted,client_messages_sent,client_bytes_sent,"
+              "client_failed_sends,client_dropped_messages,client_dropped_bytes,client_backpressure_events,"
+              "client_max_queued_bytes,client_queued_bytes_final,client_pending_bytes_final,"
+              "client_backpressure_active_final,server_messages_received,server_bytes_received,server_failed_sends,"
+              "server_dropped_messages,server_dropped_bytes,server_backpressure_events,server_max_queued_bytes,"
+              "server_queued_bytes_final,server_pending_bytes_final,server_backpressure_active_final\n";
   }
 
   output << result.transport << "," << result.strategy << "," << result.payload_size << ","
          << result.duration_seconds << "," << result.accepted_messages << "," << result.failed_sends << ","
          << result.accepted_bytes << "," << result.received_bytes << "," << std::fixed << std::setprecision(6)
-         << result.accepted_mib_per_sec << "," << result.received_mib_per_sec << "," << result.delivery_rate << "\n";
+         << result.accepted_mib_per_sec << "," << result.received_mib_per_sec << "," << result.delivery_rate << ","
+         << (result.runtime_stats_supported ? 1 : 0) << "," << result.client_messages_accepted << ","
+         << result.client_bytes_accepted << "," << result.client_messages_sent << "," << result.client_bytes_sent
+         << "," << result.client_failed_sends << "," << result.client_dropped_messages << ","
+         << result.client_dropped_bytes << "," << result.client_backpressure_events << ","
+         << result.client_max_queued_bytes << "," << result.client_queued_bytes_final << ","
+         << result.client_pending_bytes_final << "," << (result.client_backpressure_active_final ? 1 : 0) << ","
+         << result.server_messages_received << "," << result.server_bytes_received << ","
+         << result.server_failed_sends << "," << result.server_dropped_messages << ","
+         << result.server_dropped_bytes << "," << result.server_backpressure_events << ","
+         << result.server_max_queued_bytes << "," << result.server_queued_bytes_final << ","
+         << result.server_pending_bytes_final << "," << (result.server_backpressure_active_final ? 1 : 0) << "\n";
 }
 
 template <typename Client>
@@ -134,6 +210,7 @@ StrategyResult run_tcp(const unilink_bench::StrategyConfig& config, Strategy str
 
   auto result =
       run_send_loop("tcp", client, strategy, config.payload_size, config.duration_seconds, received_bytes);
+  record_runtime_stats(result, client, server);
   client.stop();
   server.stop();
   return result;
@@ -168,6 +245,7 @@ StrategyResult run_udp(const unilink_bench::StrategyConfig& config, Strategy str
 
   auto result =
       run_send_loop("udp", client, strategy, config.payload_size, config.duration_seconds, received_bytes);
+  record_runtime_stats(result, client, server);
   client.stop();
   server.stop();
   return result;
@@ -200,6 +278,7 @@ StrategyResult run_uds(const unilink_bench::StrategyConfig& config, Strategy str
 
   auto result =
       run_send_loop("uds", client, strategy, config.payload_size, config.duration_seconds, received_bytes);
+  record_runtime_stats(result, client, server);
   client.stop();
   server.stop();
   std::filesystem::remove(path);
