@@ -10,24 +10,62 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def run(command, timeout_seconds=5):
+def normalize_output(value):
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace").strip() or None
+    if isinstance(value, str):
+        return value.strip() or None
+    return None
+
+
+def command_result(command, timeout_seconds=5):
+    result = {
+        "command": command,
+        "status": "unavailable",
+        "stdout": None,
+        "stderr": None,
+        "returncode": None,
+        "error": None,
+    }
     executable = shutil.which(command[0])
     if executable is None:
-        return None
+        result["error"] = f"executable not found: {command[0]}"
+        return result
     try:
         completed = subprocess.run(
             [executable, *command[1:]],
             check=False,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             text=True,
             timeout=timeout_seconds,
         )
-    except (OSError, subprocess.TimeoutExpired):
-        return None
+    except subprocess.TimeoutExpired as exc:
+        result["status"] = "timeout"
+        result["stdout"] = normalize_output(exc.stdout)
+        result["stderr"] = normalize_output(exc.stderr)
+        result["error"] = f"timed out after {timeout_seconds}s"
+        return result
+    except OSError as exc:
+        result["status"] = "error"
+        result["error"] = str(exc)
+        return result
+
+    result["returncode"] = completed.returncode
+    result["stdout"] = normalize_output(completed.stdout)
+    result["stderr"] = normalize_output(completed.stderr)
     if completed.returncode != 0:
-        return None
-    return completed.stdout.strip()
+        result["status"] = "error"
+        result["error"] = result["stderr"] or result["stdout"] or f"exit code {completed.returncode}"
+        return result
+
+    result["status"] = "ok"
+    return result
+
+
+def run(command, timeout_seconds=5):
+    result = command_result(command, timeout_seconds)
+    return result["stdout"] if result["status"] == "ok" else None
 
 
 def first_line(value):
@@ -36,12 +74,51 @@ def first_line(value):
     return value.splitlines()[0].strip()
 
 
+def first_error(value):
+    if not value:
+        return None
+    error = value.get("error") or value.get("stderr")
+    if not error:
+        return None
+    for line in error.splitlines():
+        stripped = line.strip()
+        if "error" in stripped.lower() or "permission" in stripped.lower() or "root" in stripped.lower():
+            return stripped
+    return first_line(error)
+
+
 def read_text_file(path):
     file_path = Path(path)
     if not file_path.exists():
         return None
-    value = file_path.read_text(encoding="utf-8", errors="replace").replace("\x00", "").strip()
+    try:
+        value = file_path.read_text(encoding="utf-8", errors="replace").replace("\x00", "").strip()
+    except (OSError, UnicodeError, TypeError):
+        return None
     return value or None
+
+
+def read_text_file_result(path):
+    file_path = Path(path)
+    result = {
+        "path": str(file_path),
+        "status": "unavailable",
+        "value": None,
+        "error": None,
+    }
+    if not file_path.exists():
+        result["error"] = "file not found"
+        return result
+    try:
+        value = file_path.read_text(encoding="utf-8", errors="replace").replace("\x00", "").strip()
+    except Exception as exc:  # sysfs files can raise non-OSError read exceptions under restricted runtimes.
+        result["status"] = "error"
+        result["error"] = str(exc)
+        return result
+
+    result["status"] = "ok"
+    result["value"] = value or None
+    return result
 
 
 def read_os_release():
@@ -117,14 +194,20 @@ def parse_lscpu():
 def read_thermal_zones():
     zones = []
     for zone in sorted(Path("/sys/class/thermal").glob("thermal_zone*")):
-        zone_type = read_text_file(zone / "type")
-        temp_raw = read_text_file(zone / "temp")
+        zone_type_result = read_text_file_result(zone / "type")
+        temp_result = read_text_file_result(zone / "temp")
+        zone_type = zone_type_result["value"] if zone_type_result["status"] == "ok" else None
+        temp_raw = temp_result["value"] if temp_result["status"] == "ok" else None
         temp_millic = int(temp_raw) if temp_raw and temp_raw.lstrip("-").isdigit() else None
         zones.append(
             {
                 "name": zone.name,
                 "type": zone_type,
                 "temp_millicelsius": temp_millic,
+                "type_status": zone_type_result["status"],
+                "type_error": zone_type_result["error"],
+                "temp_status": temp_result["status"],
+                "temp_error": temp_result["error"],
             }
         )
     return zones
@@ -133,17 +216,65 @@ def read_thermal_zones():
 def collect_jetson_info():
     model = read_text_file("/proc/device-tree/model") or read_text_file("/sys/firmware/devicetree/base/model")
     l4t_release = read_text_file("/etc/nv_tegra_release")
-    nvpmodel = run(["nvpmodel", "-q"])
-    jetson_clocks = run(["jetson_clocks", "--show"])
+    nvpmodel = command_result(["nvpmodel", "-q"])
+    jetson_clocks = command_result(["jetson_clocks", "--show"])
+    tegrastats = command_result(["tegrastats"], timeout_seconds=2)
 
     info = {
         "model": model,
         "l4t_release": l4t_release,
-        "nvpmodel_query": nvpmodel,
-        "jetson_clocks_show": jetson_clocks,
+        "nvpmodel_query": nvpmodel["stdout"],
+        "nvpmodel_status": nvpmodel["status"],
+        "nvpmodel_error": first_error(nvpmodel),
+        "jetson_clocks_show": jetson_clocks["stdout"],
+        "jetson_clocks_status": jetson_clocks["status"],
+        "jetson_clocks_error": first_error(jetson_clocks),
+        "tegrastats": tegrastats["stdout"],
+        "tegrastats_status": tegrastats["status"],
+        "tegrastats_error": first_error(tegrastats),
     }
-    info["detected"] = any(value for value in info.values())
+    info["detected"] = any(value for value in (model, l4t_release, nvpmodel["stdout"], jetson_clocks["stdout"]))
     return info
+
+
+def summarize_collection_status(data):
+    warnings = []
+    thermal_zones = data["hardware"].get("thermal_zones", [])
+    failed_thermal_reads = [
+        zone["name"]
+        for zone in thermal_zones
+        if zone.get("type_status") == "error" or zone.get("temp_status") == "error"
+    ]
+    if failed_thermal_reads:
+        warnings.append(
+            {
+                "component": "thermal_zones",
+                "status": "partial",
+                "message": f"failed to read {len(failed_thermal_reads)} thermal zone field(s)",
+            }
+        )
+
+    jetson = data["hardware"].get("jetson", {})
+    for key, label in (
+        ("nvpmodel", "nvpmodel -q"),
+        ("jetson_clocks", "jetson_clocks --show"),
+        ("tegrastats", "tegrastats"),
+    ):
+        status = jetson.get(f"{key}_status")
+        if status and status != "ok":
+            warnings.append(
+                {
+                    "component": key,
+                    "status": status,
+                    "message": jetson.get(f"{key}_error") or f"{label} unavailable",
+                }
+            )
+
+    data["collection_status"] = {
+        "status": "partial" if warnings else "ok",
+        "warnings": warnings,
+    }
+    return data
 
 
 def collect_environment():
@@ -194,7 +325,7 @@ def collect_environment():
             "github_ref": os.environ.get("GITHUB_REF"),
         },
     }
-    return data
+    return summarize_collection_status(data)
 
 
 def write_text_report(data, path):
@@ -221,7 +352,15 @@ def write_text_report(data, path):
         f"jetson_model: {data['hardware']['jetson'].get('model')}",
         f"jetson_l4t_release: {data['hardware']['jetson'].get('l4t_release')}",
         f"jetson_nvpmodel: {first_line(data['hardware']['jetson'].get('nvpmodel_query'))}",
+        f"jetson_nvpmodel_status: {data['hardware']['jetson'].get('nvpmodel_status')}",
+        f"jetson_nvpmodel_error: {data['hardware']['jetson'].get('nvpmodel_error')}",
         f"jetson_clocks: {first_line(data['hardware']['jetson'].get('jetson_clocks_show'))}",
+        f"jetson_clocks_status: {data['hardware']['jetson'].get('jetson_clocks_status')}",
+        f"jetson_clocks_error: {data['hardware']['jetson'].get('jetson_clocks_error')}",
+        f"jetson_tegrastats: {first_line(data['hardware']['jetson'].get('tegrastats'))}",
+        f"jetson_tegrastats_status: {data['hardware']['jetson'].get('tegrastats_status')}",
+        f"jetson_tegrastats_error: {data['hardware']['jetson'].get('tegrastats_error')}",
+        f"environment_collection_status: {data['collection_status'].get('status')}",
         f"cmake: {data['tools'].get('cmake')}",
         f"cxx: {data['tools'].get('cxx')}",
         f"git: {data['tools'].get('git')}",
