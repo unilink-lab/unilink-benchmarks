@@ -7,7 +7,7 @@ set(UNILINK_BENCH_UNILINK_GIT_REPOSITORY
     "https://github.com/jwsung91/unilink.git"
     CACHE STRING "unilink Git repository used by FetchContent")
 set(UNILINK_BENCH_UNILINK_GIT_TAG
-    "main"
+    "v0.8.2"
     CACHE STRING "unilink Git tag, branch, or commit used by FetchContent")
 
 set(UNILINK_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
