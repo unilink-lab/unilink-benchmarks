@@ -6,7 +6,7 @@ on:
       unilink_ref:
         description: "unilink tag or commit to benchmark"
         required: true
-        default: "v0.8.7"
+        default: "v0.8.8"
       runner_labels:
         description: "JSON array of self-hosted runner labels"
         required: true
