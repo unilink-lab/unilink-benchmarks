@@ -16,6 +16,14 @@ namespace {
 
 using Strategy = unilink::base::constants::BackpressureStrategy;
 
+// Maximum UDP payload deliverable in a single IPv4 datagram: 65535 (max IP
+// packet) - 20 (IP header) - 8 (UDP header). A payload of exactly 65536
+// bytes exceeds this by 29 bytes and is rejected by the OS socket layer
+// (EMSGSIZE) on any networking stack, regardless of the library used - not
+// a unilink-specific limitation, so it's excluded from the UDP sweep
+// rather than reported as a perpetual 0%-delivery result.
+constexpr size_t kMaxUdpDatagramPayloadBytes = 65507;
+
 struct StrategyResult {
   std::string transport;
   std::string strategy;
@@ -309,9 +317,16 @@ int main(int argc, char** argv) {
       print_result(tcp);
       if (config.csv_output) append_strategy_csv(*config.csv_output, tcp);
 
-      const auto udp = run_udp(config, strategy);
-      print_result(udp);
-      if (config.csv_output) append_strategy_csv(*config.csv_output, udp);
+      if (config.payload_size <= kMaxUdpDatagramPayloadBytes) {
+        const auto udp = run_udp(config, strategy);
+        print_result(udp);
+        if (config.csv_output) append_strategy_csv(*config.csv_output, udp);
+      } else {
+        std::cout << "| udp       | " << std::left << std::setw(10)
+                   << (strategy == Strategy::Reliable ? "reliable" : "besteffort") << " | skipped: payload "
+                   << config.payload_size << " exceeds max IPv4 UDP datagram payload ("
+                   << kMaxUdpDatagramPayloadBytes << " bytes) |\n";
+      }
 
       const auto uds = run_uds(config, strategy);
       print_result(uds);
