@@ -11,7 +11,7 @@
 
 #include "common/bench_stats.hpp"
 
-namespace unilink_bench {
+namespace wirestead_bench {
 
 struct LatencyResult {
   std::string_view transport;
@@ -92,4 +92,4 @@ inline void print_result(const LatencyResult& result, const std::optional<std::s
   }
 }
 
-}  // namespace unilink_bench
+}  // namespace wirestead_bench

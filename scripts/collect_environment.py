@@ -93,7 +93,7 @@ def read_text_file(path):
         return None
     try:
         value = file_path.read_text(encoding="utf-8", errors="replace").replace("\x00", "").strip()
-    except (OSError, UnicodeError, TypeError):
+    except (OSError, TypeError, UnicodeError):
         return None
     return value or None
 

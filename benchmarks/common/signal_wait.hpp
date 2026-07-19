@@ -4,7 +4,7 @@
 #include <csignal>
 #include <thread>
 
-namespace unilink_bench {
+namespace wirestead_bench {
 
 inline volatile std::sig_atomic_t& stop_requested_flag() {
   static volatile std::sig_atomic_t stop_requested = 0;
@@ -24,4 +24,4 @@ inline void wait_for_stop_signal() {
   }
 }
 
-}  // namespace unilink_bench
+}  // namespace wirestead_bench

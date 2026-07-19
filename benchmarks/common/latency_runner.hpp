@@ -14,7 +14,7 @@
 #include "common/payload.hpp"
 #include "common/result_writer.hpp"
 
-namespace unilink_bench {
+namespace wirestead_bench {
 
 class EchoWaiter {
  public:
@@ -134,4 +134,4 @@ int run_latency_client(std::string_view transport, Client& client, size_t payloa
   return 0;
 }
 
-}  // namespace unilink_bench
+}  // namespace wirestead_bench

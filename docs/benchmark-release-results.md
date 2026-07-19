@@ -1,10 +1,10 @@
 # Benchmark Release Results
 
-This document describes how to record benchmark results for released `unilink` versions.
+This document describes how to record benchmark results for released Wirestead versions.
 
 The preferred storage model is:
 
-- GitHub Release assets for official `unilink` version baselines.
+- GitHub Release assets for official Wirestead version baselines.
 - GitHub Actions artifacts for commit-level experiments.
 - Repository commits only for documentation and tooling, not routine raw benchmark output.
 
@@ -24,24 +24,24 @@ Release assets are a better fit for official version baselines because they are:
 ## Release Tag Naming
 
 Use a benchmark-specific release tag so it is clear that the release belongs to this benchmark repository, not the core
-`unilink` library package.
+Wirestead library package.
 
-For `unilink` 0.7.5:
+For Wirestead 0.9.0:
 
 ```text
-benchmark-unilink-v0.7.5
+benchmark-wirestead-v0.9.0
 ```
 
 For a Jetson Orin Nano Super reference result:
 
 ```text
-benchmark-unilink-v0.7.5-jetson-orin-nano-super
+benchmark-wirestead-v0.9.0-jetson-orin-nano-super
 ```
 
 Recommended release title:
 
 ```text
-Benchmark results for unilink v0.7.5
+Benchmark results for Wirestead v0.9.0
 ```
 
 ## Self-Hosted Runner
@@ -80,10 +80,10 @@ Open:
 Actions -> Benchmark Release -> Run workflow
 ```
 
-For the `unilink` 0.7.5 baseline, use:
+For a Wirestead release baseline, use:
 
 ```text
-unilink_ref: v0.7.5
+wirestead_ref: v0.9.0
 runner_labels: ["self-hosted","Linux","X64"]
 publish_release: true
 payload_sizes: 64 256 1024 4096 16384 65536
@@ -97,7 +97,7 @@ strategy_duration: 3
 For a Jetson Orin Nano Super reference baseline, use:
 
 ```text
-unilink_ref: v0.7.5
+wirestead_ref: v0.9.0
 runner_labels: ["self-hosted","Linux","ARM64","jetson-orin-nano-super"]
 platform_suffix: linux-arm64-jetson-orin-nano-super
 release_suffix: jetson-orin-nano-super
@@ -113,17 +113,18 @@ strategy_duration: 3
 
 The workflow will:
 
-1. check out `unilink-benchmarks`;
-2. configure the benchmark build with `UNILINK_BENCH_UNILINK_GIT_TAG=<unilink_ref>`;
+1. check out the benchmark repository;
+2. configure the benchmark build with `WIRESTEAD_BENCH_GIT_TAG=<wirestead_ref>`;
 3. build in Release mode;
 4. collect runner environment and hardware metadata;
 5. run the latency matrix;
 6. run the strategy sweep;
-7. generate human-readable release notes from the summary files and runner metadata;
-8. package the result files into a tarball;
-9. upload the tarball as a workflow artifact;
-10. upload the tarball to a GitHub Release when `publish_release=true` and `unilink_ref` starts with `v`;
-11. create or update the GitHub Release body with the generated summary.
+7. run raw UDP and Wirestead UDP payload smoke diagnostics;
+8. generate human-readable release notes from the summary files and runner metadata;
+9. package the result files into a tarball;
+10. upload the tarball as a workflow artifact;
+11. upload the tarball to a GitHub Release when `publish_release=true` and `wirestead_ref` starts with `v`;
+12. create or update the GitHub Release body with the generated summary.
 
 The default UDP latency payload cap is 1024 bytes because larger UDP datagrams may be benchmark-model and environment
 sensitive. Set `udp_max_payload_size` to `0` only when intentionally validating a version or environment where larger
@@ -140,7 +141,7 @@ Commit SHA runs are useful when validating a candidate fix or comparing an unrel
 For those runs, set:
 
 ```text
-unilink_ref: <commit-sha>
+wirestead_ref: <commit-sha>
 publish_release: false
 ```
 
@@ -151,22 +152,22 @@ Keep these as workflow artifacts unless the result becomes part of a release bas
 The packaged asset name uses this pattern:
 
 ```text
-unilink-<ref>-linux-x64-self-hosted.tar.gz
-unilink-<ref>-linux-x64-self-hosted.tar.gz.sha256
+wirestead-<ref>-linux-x64-self-hosted.tar.gz
+wirestead-<ref>-linux-x64-self-hosted.tar.gz.sha256
 ```
 
 For example:
 
 ```text
-unilink-v0.7.5-linux-x64-self-hosted.tar.gz
-unilink-v0.7.5-linux-x64-self-hosted.tar.gz.sha256
+wirestead-v0.9.0-linux-x64-self-hosted.tar.gz
+wirestead-v0.9.0-linux-x64-self-hosted.tar.gz.sha256
 ```
 
 For Jetson Orin Nano Super:
 
 ```text
-unilink-v0.7.5-linux-arm64-jetson-orin-nano-super.tar.gz
-unilink-v0.7.5-linux-arm64-jetson-orin-nano-super.tar.gz.sha256
+wirestead-v0.9.0-linux-arm64-jetson-orin-nano-super.tar.gz
+wirestead-v0.9.0-linux-arm64-jetson-orin-nano-super.tar.gz.sha256
 ```
 
 The tarball contains:
@@ -178,6 +179,8 @@ latency_matrix.csv.meta
 strategy_sweep.csv
 strategy_sweep_summary.md
 strategy_sweep.csv.meta
+raw_udp_payload_smoke.csv
+raw_udp_payload_smoke_summary.md
 udp_payload_smoke.csv
 udp_payload_smoke_summary.md
 environment.txt
@@ -187,15 +190,15 @@ release_notes.md
 ```
 
 The GitHub Release body is generated from `release_notes.md`. It includes the benchmark target, resolved commit,
-self-hosted runner hardware summary, latency summary table, strategy summary table, UDP payload smoke summary, and run
-notes.
+self-hosted runner hardware summary, latency summary table, strategy summary table, raw UDP control summary, Wirestead UDP
+payload smoke summary, and run notes.
 
 ## Metadata Files
 
 `manifest.json` is the top-level machine-readable record. It includes:
 
-- requested `unilink` ref;
-- resolved `unilink` commit when available;
+- requested Wirestead ref;
+- resolved Wirestead commit when available;
 - benchmark repository commit;
 - GitHub run id;
 - platform suffix;
@@ -247,11 +250,17 @@ For strategy benchmarks, compare:
 `Reliable` and `BestEffort` are not expected to produce the same shape of result. `Reliable` prioritizes delivery under
 pressure, while `BestEffort` prioritizes non-blocking sends and may drop data.
 
+For UDP smoke diagnostics, use the raw UDP control and Wirestead UDP smoke together:
+
+- raw UDP succeeds + Wirestead UDP fails: investigate the Wirestead UDP path;
+- raw UDP fails + Wirestead UDP fails: investigate environment, OS, WSL2, socket buffer, or datagram behavior;
+- raw UDP succeeds + Wirestead UDP succeeds + strategy fails: investigate the pressure benchmark model.
+
 ## When to Re-Run
 
 Re-run a release baseline when:
 
-- the original run used the wrong `unilink_ref`;
+- the original run used the wrong `wirestead_ref`;
 - the self-hosted runner was under unusual load;
 - the benchmark code changed in a way that affects measurement;
 - runner hardware, OS, compiler, or kernel changed;

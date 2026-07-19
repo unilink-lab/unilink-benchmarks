@@ -1,19 +1,19 @@
-# unilink-benchmarks
+# Wirestead Benchmarks
 
-Standalone performance benchmarks for unilink.
+Standalone performance benchmarks for Wirestead.
 
-This repository measures latency, throughput, and concurrency behavior across supported unilink transports.
+This repository measures latency, throughput, and concurrency behavior across supported Wirestead transports.
 
-## What is unilink?
+## What is Wirestead?
 
-unilink is a modern C++ communication library that provides a unified interface for serial, network, and local IPC transports.
+Wirestead is a modern C++ communication library that provides a unified interface for serial, network, and local IPC transports.
 
 Core library:
-https://github.com/jwsung91/unilink
+https://github.com/wirestead/wirestead
 
 ## Scope
 
-This repository is separate from the core library to keep the main `unilink` release and package flow lightweight.
+This repository is separate from the core library to keep the main Wirestead release and package flow lightweight.
 
 The first benchmark suite focuses on local echo latency tests for:
 
@@ -28,12 +28,12 @@ even though those transports are byte streams.
 
 ## Build
 
-### Quick start with a local unilink checkout
+### Quick start with a local Wirestead checkout
 
 ```bash
 cmake -S . -B build \
-  -DUNILINK_BENCH_USE_FETCHCONTENT=ON \
-  -DUNILINK_BENCH_UNILINK_SOURCE_DIR=$HOME/workspace/jwsung91/unilink \
+  -DWIRESTEAD_BENCH_USE_FETCHCONTENT=ON \
+  -DWIRESTEAD_BENCH_SOURCE_DIR=$HOME/workspace/wirestead/wirestead \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
@@ -45,27 +45,27 @@ Then run:
 ./scripts/run_strategy_sweep.sh
 ```
 
-### Option 1: Use installed unilink package
+### Option 1: Use installed Wirestead package
 
 ```bash
-cmake -S . -B build -DUNILINK_BENCH_USE_FETCHCONTENT=OFF
+cmake -S . -B build -DWIRESTEAD_BENCH_USE_FETCHCONTENT=OFF
 cmake --build build
 ```
 
-If `unilink` is installed in a non-standard prefix, pass either `CMAKE_PREFIX_PATH` or `unilink_DIR`:
+If Wirestead is installed in a non-standard prefix, pass either `CMAKE_PREFIX_PATH` or `wirestead_DIR`:
 
 ```bash
 cmake -S . -B build \
-  -DUNILINK_BENCH_USE_FETCHCONTENT=OFF \
-  -Dunilink_DIR=/path/to/install/lib/cmake/unilink \
+  -DWIRESTEAD_BENCH_USE_FETCHCONTENT=OFF \
+  -Dwirestead_DIR=/path/to/install/lib/cmake/wirestead \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
-### Option 2: Fetch unilink from source
+### Option 2: Fetch Wirestead from source
 
 ```bash
-cmake -S . -B build -DUNILINK_BENCH_USE_FETCHCONTENT=ON
+cmake -S . -B build -DWIRESTEAD_BENCH_USE_FETCHCONTENT=ON
 cmake --build build
 ```
 
@@ -73,27 +73,30 @@ Specify a released version tag or commit id for reproducible benchmark runs:
 
 ```bash
 cmake -S . -B build \
-  -DUNILINK_BENCH_USE_FETCHCONTENT=ON \
-  -DUNILINK_BENCH_UNILINK_GIT_TAG=v0.7.5
+  -DWIRESTEAD_BENCH_USE_FETCHCONTENT=ON \
+  -DWIRESTEAD_BENCH_GIT_TAG=v0.9.0
 cmake --build build
 ```
 
 ```bash
 cmake -S . -B build \
-  -DUNILINK_BENCH_USE_FETCHCONTENT=ON \
-  -DUNILINK_BENCH_UNILINK_GIT_TAG=<commit-id>
+  -DWIRESTEAD_BENCH_USE_FETCHCONTENT=ON \
+  -DWIRESTEAD_BENCH_GIT_TAG=<commit-id>
 cmake --build build
 ```
 
-For local development against a checked-out `unilink` source tree:
+For local development against a checked-out Wirestead source tree:
 
 ```bash
-cmake -S . -B build -DUNILINK_BENCH_USE_FETCHCONTENT=ON \
-  -DUNILINK_BENCH_UNILINK_SOURCE_DIR=/path/to/unilink
+cmake -S . -B build -DWIRESTEAD_BENCH_USE_FETCHCONTENT=ON \
+  -DWIRESTEAD_BENCH_SOURCE_DIR=/path/to/wirestead
 cmake --build build
 ```
 
-Benchmark sweep metadata records the requested unilink ref and the resolved commit when available.
+Benchmark sweep metadata records the requested Wirestead ref and the resolved commit when available.
+
+Legacy `UNILINK_BENCH_*` CMake options and `unilink_ref` workflow input are still accepted for historical UniLink
+baseline runs. New runs should use the Wirestead names above.
 
 ## Run
 
@@ -169,13 +172,13 @@ build/latency_matrix.csv.meta
 
 ## Backpressure Strategy
 
-unilink supports two backpressure strategies:
+Wirestead supports two backpressure strategies:
 
 - `Reliable`: waits for queue pressure to clear and prioritizes delivery.
 - `BestEffort`: avoids blocking and may drop data under pressure.
 
 Use the strategy benchmark to compare accepted throughput, received throughput, delivery rate, failed sends, and
-RuntimeStats-derived queue/drop metrics when the selected `unilink` ref supports them.
+RuntimeStats-derived queue/drop metrics when the selected Wirestead ref supports them.
 This is a one-way streaming benchmark, not an echo latency benchmark:
 
 ```bash
@@ -235,6 +238,32 @@ build/udp_payload_smoke_summary.md
 If strategy benchmarks report zero delivery for larger UDP payloads, run this smoke benchmark in the same environment
 to classify whether single/few datagram echo works before changing the core library.
 
+## Raw UDP Payload Smoke
+
+Use raw UDP payload smoke to distinguish environment-level datagram behavior from Wirestead UDP wrapper behavior:
+
+```bash
+./scripts/run_raw_udp_payload_smoke.sh
+```
+
+Defaults:
+
+- payload sizes: `1024 4096 16384`
+- measured iterations: `1000`
+- warmup iterations: `100`
+- timeout: `1000 ms`
+
+Output files:
+
+```text
+build/raw_udp_payload_smoke.csv
+build/raw_udp_payload_smoke_summary.md
+```
+
+If raw UDP succeeds for 4096/16384 but Wirestead UDP smoke fails, investigate Wirestead UDP transport/wrapper behavior.
+
+If both raw UDP and Wirestead UDP fail, investigate OS, WSL2, socket buffer, or datagram behavior.
+
 ## Saving Results
 
 Generated files under `build/` are local artifacts and are ignored by Git.
@@ -261,7 +290,7 @@ git add "${RESULT_DIR}"
 git commit -m "docs: add local benchmark results"
 ```
 
-Each sweep also writes a `.meta` file containing environment and unilink source information, including the requested ref
+Each sweep also writes a `.meta` file containing environment and Wirestead source information, including the requested ref
 and resolved commit when available.
 
 For official release-version measurements, prefer GitHub Release assets instead of committing raw result files to the
@@ -271,17 +300,17 @@ repository. The `Benchmark Release` workflow is intended for a self-hosted runne
 Actions -> Benchmark Release -> Run workflow
 ```
 
-Recommended input for the `unilink` 0.7.5 baseline:
+Recommended input for a Wirestead release baseline:
 
 ```text
-unilink_ref: v0.7.5
+wirestead_ref: v0.9.0
 publish_release: true
 ```
 
 Recommended input for a Jetson Orin Nano Super reference baseline:
 
 ```text
-unilink_ref: v0.7.5
+wirestead_ref: v0.9.0
 runner_labels: ["self-hosted","Linux","ARM64","jetson-orin-nano-super"]
 platform_suffix: linux-arm64-jetson-orin-nano-super
 release_suffix: jetson-orin-nano-super
@@ -289,13 +318,13 @@ reference_platform: Jetson Orin Nano Super
 publish_release: true
 ```
 
-The workflow builds the benchmark suite against the requested `unilink` tag or commit, runs the latency and strategy
+The workflow builds the benchmark suite against the requested Wirestead tag or commit, runs the latency and strategy
 sweeps, uploads a workflow artifact, and uploads release assets when the ref looks like a release tag. Release tags use
 this naming pattern:
 
 ```text
-benchmark-unilink-v0.7.5
-benchmark-unilink-v0.7.5-jetson-orin-nano-super
+benchmark-wirestead-v0.9.0
+benchmark-wirestead-v0.9.0-jetson-orin-nano-super
 ```
 
 Each release artifact contains:
@@ -307,6 +336,8 @@ latency_matrix.csv.meta
 strategy_sweep.csv
 strategy_sweep_summary.md
 strategy_sweep.csv.meta
+raw_udp_payload_smoke.csv
+raw_udp_payload_smoke_summary.md
 udp_payload_smoke.csv
 udp_payload_smoke_summary.md
 environment.txt
@@ -322,7 +353,7 @@ On Jetson systems it also records device-tree model, L4T release, `nvpmodel -q`,
 zone readings when available.
 
 The GitHub Release body is generated from `release_notes.md` and includes the benchmark target, runner summary, latency
-summary table, strategy summary table, UDP payload smoke summary, and run notes.
+summary table, strategy summary table, raw UDP control summary, Wirestead UDP payload smoke summary, and run notes.
 
 The release upload step uses the GitHub CLI (`gh`) on the self-hosted runner. If `gh` is not installed, the workflow
 artifact is still the right fallback output to keep from the run.
@@ -379,6 +410,19 @@ UDP payload smoke environment variables:
 | `OUTPUT` | `build/udp_payload_smoke.csv` | Raw CSV output path |
 | `SUMMARY` | `build/udp_payload_smoke_summary.md` | Markdown summary output path |
 
+Raw UDP payload smoke environment variables:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `HOST` | `127.0.0.1` | UDP loopback host |
+| `PORT` | `9501` | Raw UDP server port |
+| `PAYLOAD_SIZES` | `1024 4096 16384` | Payload sizes to test |
+| `ITERATIONS` | `1000` | Measured sends per payload |
+| `WARMUP_ITERATIONS` | `100` | Unmeasured warmup sends per payload |
+| `TIMEOUT_MS` | `1000` | Echo timeout per send |
+| `OUTPUT` | `build/raw_udp_payload_smoke.csv` | Raw CSV output path |
+| `SUMMARY` | `build/raw_udp_payload_smoke_summary.md` | Markdown summary output path |
+
 ## Metrics
 
 Each benchmark reports:
@@ -416,8 +460,11 @@ The UDP payload smoke benchmark reports:
 - max queued bytes
 - final queued bytes
 
-RuntimeStats columns are populated only when the selected `unilink` ref supports the `stats()` API. Older refs are still
+RuntimeStats columns are populated only when the selected Wirestead ref supports the `stats()` API. Older refs are still
 supported; stats columns are marked as unavailable in the summary.
+
+The raw UDP payload smoke benchmark reports the same send, server receive, client receive, match, timeout, delivery, and
+match percentages without using any Wirestead API.
 
 ## Notes
 

@@ -3,7 +3,7 @@
 #include <chrono>
 #include <cstdint>
 
-namespace unilink_bench {
+namespace wirestead_bench {
 
 using Clock = std::chrono::steady_clock;
 using TimePoint = Clock::time_point;
@@ -19,4 +19,4 @@ inline int64_t elapsed_us(TimePoint start, TimePoint end) {
   return std::chrono::duration_cast<Microseconds>(end - start).count();
 }
 
-}  // namespace unilink_bench
+}  // namespace wirestead_bench

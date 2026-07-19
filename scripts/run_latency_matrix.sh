@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/bench_common.sh"
-export UNILINK_BENCH_BUILD_DIR="${UNILINK_BENCH_BUILD_DIR:-${ROOT_DIR}/build}"
+export WIRESTEAD_BENCH_BUILD_DIR="${WIRESTEAD_BENCH_BUILD_DIR:-${UNILINK_BENCH_BUILD_DIR:-${ROOT_DIR}/build}}"
+export UNILINK_BENCH_BUILD_DIR="${WIRESTEAD_BENCH_BUILD_DIR}"
 
 PAYLOAD_SIZES="${PAYLOAD_SIZES:-64 256 1024 4096 16384 65536}"
 TRANSPORTS="${TRANSPORTS:-tcp udp uds}"
@@ -51,7 +52,7 @@ for payload in ${PAYLOAD_SIZES}; do
             "${ROOT_DIR}/scripts/run_udp_latency.sh" --csv-output "${OUTPUT}"
           ;;
         uds)
-          SOCKET_PATH="/tmp/unilink_bench_${run_id}.sock" PAYLOAD_SIZE="${payload}" ITERATIONS="${ITERATIONS}" \
+          SOCKET_PATH="/tmp/wirestead_bench_${run_id}.sock" PAYLOAD_SIZE="${payload}" ITERATIONS="${ITERATIONS}" \
             WARMUP_ITERATIONS="${WARMUP_ITERATIONS}" \
             "${ROOT_DIR}/scripts/run_uds_latency.sh" --csv-output "${OUTPUT}"
           ;;
