@@ -29,7 +29,7 @@ on:
         type: boolean
         default: true
       build_parallelism:
-        description: "Maximum parallel build jobs"
+        description: "Parallel build jobs; keep low on memory-constrained self-hosted runners"
         required: true
         default: "2"
       payload_sizes:
