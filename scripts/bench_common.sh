@@ -48,8 +48,9 @@ wait_for_uds() {
 
 write_metadata() {
   local path="$1"
-  local bench_build_dir="${UNILINK_BENCH_BUILD_DIR:-build}"
-  local cmake_metadata="${bench_build_dir}/unilink_bench_metadata.csv"
+  local bench_build_dir="${WIRESTEAD_BENCH_BUILD_DIR:-${UNILINK_BENCH_BUILD_DIR:-build}}"
+  local cmake_metadata="${bench_build_dir}/wirestead_bench_metadata.csv"
+  local legacy_cmake_metadata="${bench_build_dir}/unilink_bench_metadata.csv"
   {
     echo "timestamp_utc,$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "uname,$(uname -a)"
@@ -57,6 +58,8 @@ write_metadata() {
     echo "cxx,$(${CXX:-c++} --version | head -n 1)"
     if [[ -f "${cmake_metadata}" ]]; then
       tail -n +2 "${cmake_metadata}"
+    elif [[ -f "${legacy_cmake_metadata}" ]]; then
+      tail -n +2 "${legacy_cmake_metadata}"
     fi
   } >"${path}"
 }

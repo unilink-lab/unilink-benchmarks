@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace unilink_bench {
+namespace wirestead_bench {
 
 constexpr size_t kFrameHeaderSize = sizeof(uint32_t);
 
@@ -55,4 +55,4 @@ class FrameDecoder {
 
 inline bool payload_matches(std::string_view expected, std::string_view actual) { return expected == actual; }
 
-}  // namespace unilink_bench
+}  // namespace wirestead_bench

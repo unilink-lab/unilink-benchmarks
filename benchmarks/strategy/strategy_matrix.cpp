@@ -10,11 +10,11 @@
 #include <thread>
 
 #include "common/bench_config.hpp"
-#include "unilink/unilink.hpp"
+#include "wirestead_bench_target.hpp"
 
 namespace {
 
-using Strategy = unilink::base::constants::BackpressureStrategy;
+using Strategy = wirestead::base::constants::BackpressureStrategy;
 
 // Maximum UDP payload deliverable in a single IPv4 datagram: 65535 (max IP
 // packet) - 20 (IP header) - 8 (UDP header). A payload of exactly 65536
@@ -87,7 +87,7 @@ StrategyResult make_result(std::string transport, Strategy strategy, size_t payl
           delivery_rate};
 }
 
-#ifdef UNILINK_BENCH_HAS_RUNTIME_STATS
+#ifdef WIRESTEAD_BENCH_HAS_RUNTIME_STATS
 template <typename Client, typename Server>
 void record_runtime_stats(StrategyResult& result, const Client& client, const Server& server) {
   const auto client_stats = client.stats();
@@ -194,22 +194,22 @@ StrategyResult run_send_loop(std::string transport, Client& client, Strategy str
                      failed_sends.load(), accepted_bytes.load(), received_bytes.load());
 }
 
-StrategyResult run_tcp(const unilink_bench::StrategyConfig& config, Strategy strategy) {
+StrategyResult run_tcp(const wirestead_bench::StrategyConfig& config, Strategy strategy) {
   std::atomic<uint64_t> received_bytes{0};
 
-  unilink::TcpServer server(config.tcp_port);
-  server.on_data([&](const unilink::MessageContext& ctx) {
+  wirestead::TcpServer server(config.tcp_port);
+  server.on_data([&](const wirestead::MessageContext& ctx) {
     received_bytes.fetch_add(ctx.data().size(), std::memory_order_relaxed);
   });
-  server.on_error([](const unilink::ErrorContext& ctx) { std::cerr << "[tcp server] " << ctx.message() << "\n"; });
+  server.on_error([](const wirestead::ErrorContext& ctx) { std::cerr << "[tcp server] " << ctx.message() << "\n"; });
 
   if (!server.start_sync()) {
     throw std::runtime_error("failed to start TCP strategy server");
   }
 
-  unilink::TcpClient client(config.host, config.tcp_port);
+  wirestead::TcpClient client(config.host, config.tcp_port);
   client.backpressure_strategy(strategy);
-  client.on_error([](const unilink::ErrorContext& ctx) { std::cerr << "[tcp client] " << ctx.message() << "\n"; });
+  client.on_error([](const wirestead::ErrorContext& ctx) { std::cerr << "[tcp client] " << ctx.message() << "\n"; });
 
   if (!client.start_sync()) {
     server.stop();
@@ -224,27 +224,27 @@ StrategyResult run_tcp(const unilink_bench::StrategyConfig& config, Strategy str
   return result;
 }
 
-StrategyResult run_udp(const unilink_bench::StrategyConfig& config, Strategy strategy) {
+StrategyResult run_udp(const wirestead_bench::StrategyConfig& config, Strategy strategy) {
   std::atomic<uint64_t> received_bytes{0};
 
-  unilink::UdpServer server(config.udp_server_port);
-  server.on_data([&](const unilink::MessageContext& ctx) {
+  wirestead::UdpServer server(config.udp_server_port);
+  server.on_data([&](const wirestead::MessageContext& ctx) {
     received_bytes.fetch_add(ctx.data().size(), std::memory_order_relaxed);
   });
-  server.on_error([](const unilink::ErrorContext& ctx) { std::cerr << "[udp server] " << ctx.message() << "\n"; });
+  server.on_error([](const wirestead::ErrorContext& ctx) { std::cerr << "[udp server] " << ctx.message() << "\n"; });
 
   if (!server.start_sync()) {
     throw std::runtime_error("failed to start UDP strategy server");
   }
 
-  unilink::config::UdpConfig client_config;
+  wirestead::config::UdpConfig client_config;
   client_config.local_port = config.udp_client_port;
   client_config.remote_address = config.host;
   client_config.remote_port = config.udp_server_port;
 
-  unilink::UdpClient client(client_config);
+  wirestead::UdpClient client(client_config);
   client.backpressure_strategy(strategy);
-  client.on_error([](const unilink::ErrorContext& ctx) { std::cerr << "[udp client] " << ctx.message() << "\n"; });
+  client.on_error([](const wirestead::ErrorContext& ctx) { std::cerr << "[udp client] " << ctx.message() << "\n"; });
 
   if (!client.start_sync()) {
     server.stop();
@@ -259,24 +259,24 @@ StrategyResult run_udp(const unilink_bench::StrategyConfig& config, Strategy str
   return result;
 }
 
-StrategyResult run_uds(const unilink_bench::StrategyConfig& config, Strategy strategy) {
+StrategyResult run_uds(const wirestead_bench::StrategyConfig& config, Strategy strategy) {
   std::atomic<uint64_t> received_bytes{0};
   const std::string path = config.uds_path + "_" + strategy_name(strategy);
   std::filesystem::remove(path);
 
-  unilink::UdsServer server(path);
-  server.on_data([&](const unilink::MessageContext& ctx) {
+  wirestead::UdsServer server(path);
+  server.on_data([&](const wirestead::MessageContext& ctx) {
     received_bytes.fetch_add(ctx.data().size(), std::memory_order_relaxed);
   });
-  server.on_error([](const unilink::ErrorContext& ctx) { std::cerr << "[uds server] " << ctx.message() << "\n"; });
+  server.on_error([](const wirestead::ErrorContext& ctx) { std::cerr << "[uds server] " << ctx.message() << "\n"; });
 
   if (!server.start_sync()) {
     throw std::runtime_error("failed to start UDS strategy server");
   }
 
-  unilink::UdsClient client(path);
+  wirestead::UdsClient client(path);
   client.backpressure_strategy(strategy);
-  client.on_error([](const unilink::ErrorContext& ctx) { std::cerr << "[uds client] " << ctx.message() << "\n"; });
+  client.on_error([](const wirestead::ErrorContext& ctx) { std::cerr << "[uds client] " << ctx.message() << "\n"; });
 
   if (!client.start_sync()) {
     server.stop();
@@ -304,7 +304,7 @@ void print_result(const StrategyResult& result) {
 
 int main(int argc, char** argv) {
   try {
-    const auto config = unilink_bench::parse_strategy_args(argc, argv);
+    const auto config = wirestead_bench::parse_strategy_args(argc, argv);
     const Strategy strategies[] = {Strategy::Reliable, Strategy::BestEffort};
 
     std::cout << "payload_size: " << config.payload_size << " bytes\n";

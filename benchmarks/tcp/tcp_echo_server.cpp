@@ -3,17 +3,17 @@
 
 #include "common/bench_config.hpp"
 #include "common/signal_wait.hpp"
-#include "unilink/unilink.hpp"
+#include "wirestead_bench_target.hpp"
 
 int main(int argc, char** argv) {
   try {
-    const auto port = unilink_bench::parse_server_port_args(argc, argv, unilink_bench::kDefaultTcpPort);
-    std::unique_ptr<unilink::TcpServer> server;
+    const auto port = wirestead_bench::parse_server_port_args(argc, argv, wirestead_bench::kDefaultTcpPort);
+    std::unique_ptr<wirestead::TcpServer> server;
 
     server =
-        unilink::tcp_server(port)
-            .on_data([&server](const unilink::MessageContext& ctx) { server->send_to(ctx.client_id(), ctx.data()); })
-            .on_error([](const unilink::ErrorContext& ctx) { std::cerr << "[error] " << ctx.message() << "\n"; })
+        wirestead::tcp_server(port)
+            .on_data([&server](const wirestead::MessageContext& ctx) { server->send_to(ctx.client_id(), ctx.data()); })
+            .on_error([](const wirestead::ErrorContext& ctx) { std::cerr << "[error] " << ctx.message() << "\n"; })
             .build();
 
     if (!server->start_sync()) {
@@ -22,8 +22,8 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "TCP echo server listening on port " << port << "\n";
-    unilink_bench::install_signal_handlers();
-    unilink_bench::wait_for_stop_signal();
+    wirestead_bench::install_signal_handlers();
+    wirestead_bench::wait_for_stop_signal();
     server->stop();
     return 0;
   } catch (const std::exception& ex) {

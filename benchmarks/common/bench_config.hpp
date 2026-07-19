@@ -8,12 +8,12 @@
 #include <stdexcept>
 #include <string>
 
-namespace unilink_bench {
+namespace wirestead_bench {
 
 constexpr const char* kDefaultHost = "127.0.0.1";
 constexpr uint16_t kDefaultTcpPort = 9000;
 constexpr uint16_t kDefaultUdpPort = 9001;
-constexpr const char* kDefaultUdsPath = "/tmp/unilink_bench.sock";
+constexpr const char* kDefaultUdsPath = "/tmp/wirestead_bench.sock";
 constexpr size_t kDefaultPayloadSize = 1024;
 constexpr size_t kDefaultIterations = 100000;
 constexpr size_t kDefaultWarmupIterations = 0;
@@ -41,7 +41,7 @@ struct StrategyConfig {
   uint16_t tcp_port = 9100;
   uint16_t udp_server_port = 9101;
   uint16_t udp_client_port = 9102;
-  std::string uds_path = "/tmp/unilink_strategy_bench.sock";
+  std::string uds_path = "/tmp/wirestead_strategy_bench.sock";
   size_t payload_size = kDefaultPayloadSize;
   int duration_seconds = kDefaultStrategyDurationSeconds;
   std::optional<std::string> csv_output;
@@ -202,4 +202,4 @@ inline StrategyConfig parse_strategy_args(int argc, char** argv) {
   return config;
 }
 
-}  // namespace unilink_bench
+}  // namespace wirestead_bench

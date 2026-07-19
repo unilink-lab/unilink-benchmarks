@@ -3,10 +3,14 @@ name: Benchmark Release
 on:
   workflow_dispatch:
     inputs:
+      wirestead_ref:
+        description: "Wirestead tag, branch, or commit to benchmark"
+        required: false
+        default: ""
       unilink_ref:
-        description: "unilink tag or commit to benchmark"
-        required: true
-        default: "v0.8.8"
+        description: "Deprecated alias for wirestead_ref"
+        required: false
+        default: ""
       runner_labels:
         description: "JSON array of self-hosted runner labels"
         required: true
@@ -24,7 +28,7 @@ on:
         required: false
         default: ""
       publish_release:
-        description: "Upload release assets when unilink_ref looks like a release tag"
+        description: "Upload release assets when the resolved Wirestead ref looks like a release tag"
         required: true
         type: boolean
         default: true
@@ -78,7 +82,7 @@ permissions:
 
 jobs:
   benchmark:
-    name: Benchmark unilink ${{ inputs.unilink_ref }}
+    name: Benchmark Wirestead ${{ inputs.wirestead_ref || inputs.unilink_ref }}
     runs-on: ${{ fromJSON(inputs.runner_labels) }}
     timeout-minutes: 120
 
@@ -86,11 +90,32 @@ jobs:
       - name: Checkout benchmark repo
         uses: actions/checkout@v4
 
+      - name: Resolve benchmark target
+        id: target
+        env:
+          WIRESTEAD_REF: ${{ inputs.wirestead_ref }}
+          UNILINK_REF: ${{ inputs.unilink_ref }}
+        run: |
+          set -euo pipefail
+          target_ref="${WIRESTEAD_REF}"
+          if [[ -n "${UNILINK_REF}" ]]; then
+            if [[ -n "${target_ref}" && "${target_ref}" != "${UNILINK_REF}" ]]; then
+              echo "wirestead_ref and deprecated unilink_ref disagree" >&2
+              exit 1
+            fi
+            target_ref="${UNILINK_REF}"
+          fi
+          if [[ -z "${target_ref}" ]]; then
+            echo "wirestead_ref is required" >&2
+            exit 1
+          fi
+          echo "target_ref=${target_ref}" >>"${GITHUB_OUTPUT}"
+
       - name: Configure
         run: >
           cmake -S . -B build
-          -DUNILINK_BENCH_USE_FETCHCONTENT=ON
-          -DUNILINK_BENCH_UNILINK_GIT_TAG="${{ inputs.unilink_ref }}"
+          -DWIRESTEAD_BENCH_USE_FETCHCONTENT=ON
+          -DWIRESTEAD_BENCH_GIT_TAG="${{ steps.target.outputs.target_ref }}"
           -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
@@ -123,6 +148,14 @@ jobs:
           SUMMARY="${result_dir}/strategy_sweep_summary.md" \
           ./scripts/run_strategy_sweep.sh
 
+          OUTPUT="${result_dir}/raw_udp_payload_smoke.csv" \
+          SUMMARY="${result_dir}/raw_udp_payload_smoke_summary.md" \
+          PAYLOAD_SIZES="${UDP_PAYLOAD_SMOKE_SIZES}" \
+          ITERATIONS="${UDP_PAYLOAD_SMOKE_ITERATIONS}" \
+          WARMUP_ITERATIONS="${UDP_PAYLOAD_SMOKE_WARMUP_ITERATIONS}" \
+          TIMEOUT_MS="${UDP_PAYLOAD_SMOKE_TIMEOUT_MS}" \
+          ./scripts/run_raw_udp_payload_smoke.sh
+
           OUTPUT="${result_dir}/udp_payload_smoke.csv" \
           SUMMARY="${result_dir}/udp_payload_smoke_summary.md" \
           PAYLOAD_SIZES="${UDP_PAYLOAD_SMOKE_SIZES}" \
@@ -135,7 +168,7 @@ jobs:
         run: >
           python3 scripts/generate_release_notes.py
           --result-dir build/release-results
-          --unilink-ref "${{ inputs.unilink_ref }}"
+          --wirestead-ref "${{ steps.target.outputs.target_ref }}"
           --platform-suffix "${{ inputs.platform_suffix }}"
           --reference-platform "${{ inputs.reference_platform }}"
           --output build/release-results/release_notes.md
@@ -146,6 +179,7 @@ jobs:
           python3 scripts/package_results.py
           --result-dir build/release-results
           --output-dir build/package
+          --wirestead-ref "${{ steps.target.outputs.target_ref }}"
           --unilink-ref "${{ inputs.unilink_ref }}"
           --platform-suffix "${{ inputs.platform_suffix }}"
           --reference-platform "${{ inputs.reference_platform }}"
@@ -160,10 +194,10 @@ jobs:
           if-no-files-found: error
 
       - name: Upload release assets
-        if: ${{ inputs.publish_release && startsWith(inputs.unilink_ref, 'v') }}
+        if: ${{ inputs.publish_release && startsWith(steps.target.outputs.target_ref, 'v') }}
         env:
           GH_TOKEN: ${{ github.token }}
-          UNILINK_REF: ${{ inputs.unilink_ref }}
+          WIRESTEAD_REF: ${{ steps.target.outputs.target_ref }}
           RELEASE_SUFFIX: ${{ inputs.release_suffix }}
           REFERENCE_PLATFORM: ${{ inputs.reference_platform }}
           TARBALL: ${{ steps.package.outputs.tarball }}
@@ -173,11 +207,11 @@ jobs:
           set -euo pipefail
           command -v gh >/dev/null
           release_suffix="$(printf '%s' "${RELEASE_SUFFIX}" | sed 's/[^A-Za-z0-9._-]/-/g')"
-          release_tag="benchmark-unilink-${UNILINK_REF}"
+          release_tag="benchmark-wirestead-${WIRESTEAD_REF}"
           if [[ -n "${release_suffix}" ]]; then
             release_tag="${release_tag}-${release_suffix}"
           fi
-          release_title="Benchmark results for unilink ${UNILINK_REF}"
+          release_title="Benchmark results for Wirestead ${WIRESTEAD_REF}"
           if [[ -n "${REFERENCE_PLATFORM}" ]]; then
             release_title="${release_title} on ${REFERENCE_PLATFORM}"
           elif [[ -n "${release_suffix}" ]]; then

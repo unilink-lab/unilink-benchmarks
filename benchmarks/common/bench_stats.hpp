@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace unilink_bench {
+namespace wirestead_bench {
 
 struct OutlierCount {
   int64_t threshold_us = 0;
@@ -100,4 +100,4 @@ inline LatencyStats compute_latency_stats(std::vector<int64_t> samples,
   return stats;
 }
 
-}  // namespace unilink_bench
+}  // namespace wirestead_bench
